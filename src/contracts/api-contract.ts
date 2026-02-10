@@ -14,7 +14,7 @@ export interface ApiContractDocument {
 export function buildApiContract(serviceName: string): ApiContractDocument {
   return {
     name: serviceName,
-    version: "3.1.0-article-lifecycle",
+    version: "3.2.0-dynamic-pricing",
     generatedAt: new Date().toISOString(),
     routes: [
       { method: "GET", path: "/", summary: "Service identity" },
@@ -54,6 +54,7 @@ export function buildApiContract(serviceName: string): ApiContractDocument {
       { method: "POST", path: "/billing/customers", summary: "Create billing customer" },
       { method: "GET", path: "/rewards/ledger", summary: "List reward ledger entries" },
       { method: "POST", path: "/rewards/ledger", summary: "Create reward ledger entry" },
+      { method: "POST", path: "/ops/pricing/quote", summary: "Compute deterministic dynamic price quote" },
     ],
   };
 }

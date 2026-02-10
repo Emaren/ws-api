@@ -2,6 +2,10 @@ import { HttpError } from "../../shared/http-error.js";
 import { createId, nowIso } from "../../shared/ids.js";
 import type { BusinessOpsRepository } from "./business-ops.repository.js";
 import {
+  quoteDeterministicDynamicPrice,
+  type DynamicPricingQuote,
+} from "./dynamic-pricing.js";
+import {
   AFFILIATE_NETWORKS,
   BUSINESS_STATUSES,
   CAMPAIGN_STATUSES,
@@ -1637,6 +1641,50 @@ export class BusinessOpsService {
     }
 
     return deleted;
+  }
+
+  quoteDynamicPrice(payload: unknown): DynamicPricingQuote {
+    const input = asRecord(payload, "pricing quote");
+
+    const businessId = requiredTrimmedString(input.businessId, "businessId");
+    const inventoryItemId = requiredTrimmedString(input.inventoryItemId, "inventoryItemId");
+    const quantity = integerOrDefault(input.quantity, 1, "quantity", 1);
+    const asOf = hasKey(input, "asOf") ? requiredIsoDate(input.asOf, "asOf") : nowIso();
+    const manualOverrideCents = hasKey(input, "manualOverrideCents")
+      ? optionalInteger(input.manualOverrideCents, "manualOverrideCents", 0)
+      : null;
+
+    const business = this.requireBusiness(businessId);
+    const inventoryItem = this.requireInventoryItem(inventoryItemId);
+    if (inventoryItem.businessId !== business.id) {
+      throw new HttpError(400, "inventoryItemId must belong to businessId");
+    }
+
+    const pricingRules = this.repository
+      .list("pricingRules")
+      .filter(
+        (rule) =>
+          rule.businessId === business.id &&
+          (rule.inventoryItemId === null || rule.inventoryItemId === inventoryItem.id),
+      );
+
+    const offers = this.repository
+      .list("offers")
+      .filter(
+        (offer) =>
+          offer.businessId === business.id &&
+          (offer.inventoryItemId === null || offer.inventoryItemId === inventoryItem.id),
+      );
+
+    return quoteDeterministicDynamicPrice({
+      business,
+      inventoryItem,
+      pricingRules,
+      offers,
+      quantity,
+      asOfIso: asOf,
+      manualOverrideCents,
+    });
   }
 
   counts(): Record<string, number> {

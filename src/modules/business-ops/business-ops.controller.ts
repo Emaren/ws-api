@@ -149,6 +149,13 @@ export function createBusinessOpsRouter(service: BusinessOpsService): Router {
     remove: (id) => service.deleteRewardLedger(id),
   });
 
+  router.post(
+    "/pricing/quote",
+    withErrorBoundary((req, res) => {
+      res.json(service.quoteDynamicPrice(req.body));
+    }),
+  );
+
   router.get(
     "/counts",
     withErrorBoundary((_req, res) => {
