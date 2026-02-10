@@ -1,5 +1,6 @@
 import type {
   ArticleRecord,
+  AuthSessionRecord,
   BillingCustomerRecord,
   BusinessRecord,
   InventoryItemRecord,
@@ -10,6 +11,7 @@ import type {
 
 export interface MemoryStore {
   users: UserRecord[];
+  authSessions: AuthSessionRecord[];
   articles: ArticleRecord[];
   businesses: BusinessRecord[];
   inventoryItems: InventoryItemRecord[];
@@ -21,6 +23,7 @@ export interface MemoryStore {
 export function createMemoryStore(): MemoryStore {
   return {
     users: [],
+    authSessions: [],
     articles: [],
     businesses: [],
     inventoryItems: [],

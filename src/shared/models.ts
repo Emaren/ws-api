@@ -17,6 +17,23 @@ export function toPublicUser(user: UserRecord): PublicUser {
   return safe;
 }
 
+export interface AuthSessionRecord {
+  id: string;
+  userId: string;
+  accessToken: string;
+  issuedAt: string;
+  expiresAt: string;
+  lastSeenAt: string;
+  revokedAt: string | null;
+}
+
+export type PublicAuthSession = Omit<AuthSessionRecord, "accessToken">;
+
+export function toPublicAuthSession(session: AuthSessionRecord): PublicAuthSession {
+  const { accessToken: _accessToken, ...safe } = session;
+  return safe;
+}
+
 export type ArticleStatus = "DRAFT" | "PUBLISHED";
 
 export interface ArticleRecord {

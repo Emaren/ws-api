@@ -40,6 +40,9 @@ Operational routes:
 - `GET /ready`
 - `GET /api/ready`
 - `GET /api/contract`
+- `POST /auth/logout`
+- `GET /auth/me`
+- `GET /auth/session`
 
 ## Persistence strategy
 

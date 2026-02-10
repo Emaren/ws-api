@@ -5,7 +5,11 @@ import { logEvent } from "./logger.js";
 export function respondWithError(
   res: Response,
   error: unknown,
-  options?: { logLevel?: string; method?: string; path?: string },
+  options?: {
+    logLevel?: string | undefined;
+    method?: string | undefined;
+    path?: string | undefined;
+  },
 ): void {
   const requestId = typeof res.locals.requestId === "string" ? res.locals.requestId : "n/a";
 

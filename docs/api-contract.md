@@ -18,11 +18,20 @@ This contract describes the current modular API baseline and reliability endpoin
 
 - `POST /auth/register`
 - `POST /auth/login`
+- `POST /auth/logout` (requires `Authorization: Bearer <accessToken>`)
+- `GET /auth/me` (requires bearer token)
+- `GET /auth/session` (requires bearer token)
 
 Legacy aliases preserved:
 
 - `POST /api/register`
 - `POST /login`
+- `POST /logout`
+- `GET /me`
+- `GET /session`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `GET /api/auth/session`
 
 ## Domain routes
 

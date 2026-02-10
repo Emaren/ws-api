@@ -14,7 +14,7 @@ export interface ApiContractDocument {
 export function buildApiContract(serviceName: string): ApiContractDocument {
   return {
     name: serviceName,
-    version: "2.0.0-modular",
+    version: "3.0.0-auth-sessions",
     generatedAt: new Date().toISOString(),
     routes: [
       { method: "GET", path: "/", summary: "Service identity" },
@@ -26,8 +26,17 @@ export function buildApiContract(serviceName: string): ApiContractDocument {
       { method: "GET", path: "/api/contract", summary: "Machine-readable API contract" },
       { method: "POST", path: "/auth/register", summary: "Register a user" },
       { method: "POST", path: "/auth/login", summary: "Login user" },
+      { method: "POST", path: "/auth/logout", summary: "Logout session" },
+      { method: "GET", path: "/auth/me", summary: "Get current user from bearer session" },
+      { method: "GET", path: "/auth/session", summary: "Get current session details" },
       { method: "POST", path: "/api/register", summary: "Legacy register alias" },
       { method: "POST", path: "/login", summary: "Legacy login alias" },
+      { method: "POST", path: "/logout", summary: "Legacy logout alias" },
+      { method: "GET", path: "/me", summary: "Legacy me alias" },
+      { method: "GET", path: "/session", summary: "Legacy session alias" },
+      { method: "POST", path: "/api/auth/logout", summary: "Alias for logout" },
+      { method: "GET", path: "/api/auth/me", summary: "Alias for me" },
+      { method: "GET", path: "/api/auth/session", summary: "Alias for session" },
       { method: "GET", path: "/users", summary: "List users" },
       { method: "PATCH", path: "/users/:id/role", summary: "Update user role" },
       { method: "GET", path: "/articles", summary: "List articles" },

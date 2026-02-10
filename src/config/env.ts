@@ -29,6 +29,23 @@ function parsePort(rawValue: string | undefined): number {
   return parsed;
 }
 
+function parsePositiveInt(
+  rawValue: string | undefined,
+  fallback: number,
+  label: string,
+): number {
+  if (!rawValue) {
+    return fallback;
+  }
+
+  const parsed = Number.parseInt(rawValue, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(`${label} must be a positive integer`);
+  }
+
+  return parsed;
+}
+
 function parseOrigins(rawValue: string | undefined): string[] {
   if (!rawValue) {
     return [];
@@ -93,6 +110,7 @@ export interface AppEnv {
   logLevel: LogLevel;
   corsOrigins: string[];
   allowWildcardCorsInProduction: boolean;
+  authSessionTtlSeconds: number;
   bootstrapAdminEmail: string | undefined;
   bootstrapAdminPassword: string | undefined;
   bootstrapAdminName: string;
@@ -128,6 +146,10 @@ function validateEnv(env: AppEnv): AppEnv {
     );
   }
 
+  if (env.authSessionTtlSeconds < 60) {
+    throw new Error("AUTH_SESSION_TTL_SECONDS must be at least 60");
+  }
+
   return env;
 }
 
@@ -141,6 +163,11 @@ export function loadEnv(): AppEnv {
     allowWildcardCorsInProduction: parseBoolean(
       readTrimmedEnv("CORS_ALLOW_WILDCARD_IN_PROD"),
       true,
+    ),
+    authSessionTtlSeconds: parsePositiveInt(
+      readTrimmedEnv("AUTH_SESSION_TTL_SECONDS"),
+      60 * 60 * 24 * 7,
+      "AUTH_SESSION_TTL_SECONDS",
     ),
     bootstrapAdminEmail: readTrimmedEnv("BOOTSTRAP_ADMIN_EMAIL"),
     bootstrapAdminPassword: readTrimmedEnv("BOOTSTRAP_ADMIN_PASSWORD"),

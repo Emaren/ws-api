@@ -48,6 +48,7 @@ Production plumbing now includes:
 - `LOG_LEVEL` one of `debug|info|warn|error` (default `info`)
 - `CORS_ORIGINS` optional comma-separated allowlist
 - `CORS_ALLOW_WILDCARD_IN_PROD` optional bool, default `true`
+- `AUTH_SESSION_TTL_SECONDS` optional session ttl in seconds (default `604800`)
 - `BOOTSTRAP_ADMIN_EMAIL` optional bootstrap owner account email
 - `BOOTSTRAP_ADMIN_PASSWORD` optional bootstrap owner account password
 - `BOOTSTRAP_ADMIN_NAME` optional bootstrap owner display name
@@ -74,6 +75,7 @@ Production plumbing now includes:
 - `GET /health` and `GET /api/health` for liveness
 - `GET /ready` and `GET /api/ready` for readiness
 - `GET /api/contract` for contract metadata
+- `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `GET /auth/session` for auth session flow
 
 ## Baseline documentation
 

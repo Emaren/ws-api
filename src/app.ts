@@ -48,7 +48,7 @@ export function createApp(env: AppEnv): express.Express {
   const store = createMemoryStore();
 
   const usersRepository = new InMemoryUsersRepository(store);
-  const authRepository = new AuthRepositoryAdapter(usersRepository);
+  const authRepository = new AuthRepositoryAdapter(usersRepository, store);
   const articlesRepository = new InMemoryArticlesRepository(store);
   const businessesRepository = new InMemoryBusinessesRepository(store);
   const inventoryRepository = new InMemoryInventoryRepository(store);
@@ -56,7 +56,9 @@ export function createApp(env: AppEnv): express.Express {
   const billingRepository = new InMemoryBillingRepository(store);
   const rewardsRepository = new InMemoryRewardsRepository(store);
 
-  const authService = new AuthService(authRepository);
+  const authService = new AuthService(authRepository, {
+    sessionTtlSeconds: env.authSessionTtlSeconds,
+  });
   const usersService = new UsersService(usersRepository);
   const articlesService = new ArticlesService(articlesRepository);
   const businessesService = new BusinessesService(businessesRepository);
@@ -78,7 +80,9 @@ export function createApp(env: AppEnv): express.Express {
     }
   }
 
-  const authController = createAuthController(authService);
+  const authController = createAuthController(authService, {
+    logLevel: env.logLevel,
+  });
 
   const healthHandler: RequestHandler = (_req, res) => {
     res.json({
@@ -91,6 +95,7 @@ export function createApp(env: AppEnv): express.Express {
       uptime_s: Math.floor((Date.now() - startedAtMs) / 1000),
       modules: {
         users: store.users.length,
+        authSessions: store.authSessions.length,
         articles: store.articles.length,
         businesses: store.businesses.length,
         inventoryItems: store.inventoryItems.length,
@@ -120,6 +125,7 @@ export function createApp(env: AppEnv): express.Express {
       checks,
       modules: {
         users: store.users.length,
+        authSessions: store.authSessions.length,
         articles: store.articles.length,
         businesses: store.businesses.length,
         inventoryItems: store.inventoryItems.length,
@@ -156,6 +162,12 @@ export function createApp(env: AppEnv): express.Express {
   app.use("/auth", authController.router);
   app.post("/login", authController.loginHandler);
   app.post("/api/register", authController.registerHandler);
+  app.post("/logout", authController.logoutHandler);
+  app.get("/me", authController.meHandler);
+  app.get("/session", authController.sessionHandler);
+  app.post("/api/auth/logout", authController.logoutHandler);
+  app.get("/api/auth/me", authController.meHandler);
+  app.get("/api/auth/session", authController.sessionHandler);
 
   app.use("/users", createUsersRouter(usersService));
   app.use("/articles", createArticlesRouter(articlesService));
