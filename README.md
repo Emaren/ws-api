@@ -71,12 +71,25 @@ Production plumbing now includes:
 - `npm run build`
 - `npm run start`
 - `npm run verify`
+- `npm run ci:migrations`
+
+## CI gates
+
+GitHub Actions workflow: `.github/workflows/ci.yml`
+
+Gate order:
+
+1. `npm run ci:migrations`
+2. `npm run lint`
+3. `npm run test`
+4. `npm run build`
+
+The workflow always writes a gate summary table and fails the run if any gate is not `PASS`.
 
 ## Known gaps (summary)
 
 - No persistent database integration yet (in-memory repositories)
 - Auth token is placeholder and not production-grade
-- No automated CI pipeline yet (local scripts exist)
 
 ## Operational endpoints
 

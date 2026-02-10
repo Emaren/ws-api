@@ -1,0 +1,101 @@
+name: ws-api CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ws-api-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: lint-test-build-migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Migration gate
+        id: migrations
+        continue-on-error: true
+        run: npm run ci:migrations
+
+      - name: Lint gate
+        id: lint
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Test gate
+        id: test
+        continue-on-error: true
+        run: npm run test
+
+      - name: Build gate
+        id: build
+        continue-on-error: true
+        run: npm run build
+
+      - name: Gate summary
+        if: always()
+        env:
+          MIGRATIONS_OUTCOME: ${{ steps.migrations.outcome }}
+          LINT_OUTCOME: ${{ steps.lint.outcome }}
+          TEST_OUTCOME: ${{ steps.test.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+        run: |
+          set -euo pipefail
+          failures=0
+
+          result_label() {
+            case "$1" in
+              success) echo "PASS" ;;
+              failure) echo "FAIL" ;;
+              cancelled) echo "CANCELLED" ;;
+              skipped) echo "SKIPPED" ;;
+              "") echo "NOT_RUN" ;;
+              *) echo "$1" ;;
+            esac
+          }
+
+          gate_line() {
+            gate="$1"
+            outcome="$2"
+            label="$(result_label "$outcome")"
+            if [[ "$label" != "PASS" ]]; then
+              failures=1
+            fi
+            echo "| ${gate} | ${label} |"
+          }
+
+          {
+            echo "## ws-api CI Gate Summary"
+            echo
+            echo "| Gate | Result |"
+            echo "| --- | --- |"
+            gate_line "migrations" "$MIGRATIONS_OUTCOME"
+            gate_line "lint" "$LINT_OUTCOME"
+            gate_line "test" "$TEST_OUTCOME"
+            gate_line "build" "$BUILD_OUTCOME"
+            echo
+            echo "- commit: \`${GITHUB_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$failures" -ne 0 ]]; then
+            echo "::error::One or more ws-api CI gates failed."
+            exit 1
+          fi
