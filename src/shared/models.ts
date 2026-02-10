@@ -147,3 +147,45 @@ export interface RewardLedgerEntryRecord {
   metadata: string | null;
   createdAt: string;
 }
+
+export type WalletChainType = "COSMOS";
+
+export interface WalletLinkRecord {
+  id: string;
+  userId: string;
+  chainType: WalletChainType;
+  walletAddress: string;
+  walletAddressPrefix: string;
+  publicKeyBase64: string;
+  linkedAt: string;
+  lastVerifiedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WalletLinkChallengeRecord {
+  id: string;
+  userId: string;
+  chainType: WalletChainType;
+  walletAddress: string;
+  nonce: string;
+  message: string;
+  createdAt: string;
+  expiresAt: string;
+  usedAt: string | null;
+}
+
+export type PublicWalletLink = Omit<
+  WalletLinkRecord,
+  "publicKeyBase64" | "walletAddressPrefix" | "updatedAt"
+>;
+
+export function toPublicWalletLink(link: WalletLinkRecord): PublicWalletLink {
+  const {
+    publicKeyBase64: _publicKeyBase64,
+    walletAddressPrefix: _walletAddressPrefix,
+    updatedAt: _updatedAt,
+    ...safe
+  } = link;
+  return safe;
+}

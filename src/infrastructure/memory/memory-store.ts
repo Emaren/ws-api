@@ -7,6 +7,8 @@ import type {
   NotificationAuditLogRecord,
   NotificationJobRecord,
   RewardLedgerEntryRecord,
+  WalletLinkChallengeRecord,
+  WalletLinkRecord,
   UserRecord,
 } from "../../shared/models.js";
 
@@ -20,6 +22,8 @@ export interface MemoryStore {
   notificationAuditLogs: NotificationAuditLogRecord[];
   billingCustomers: BillingCustomerRecord[];
   rewardLedger: RewardLedgerEntryRecord[];
+  walletLinks: WalletLinkRecord[];
+  walletChallenges: WalletLinkChallengeRecord[];
 }
 
 export function createMemoryStore(): MemoryStore {
@@ -33,5 +37,7 @@ export function createMemoryStore(): MemoryStore {
     notificationAuditLogs: [],
     billingCustomers: [],
     rewardLedger: [],
+    walletLinks: [],
+    walletChallenges: [],
   };
 }

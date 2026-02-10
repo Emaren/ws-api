@@ -14,6 +14,7 @@ Backend API repository for WheatAndStone.
 - notifications
 - billing
 - rewards (crypto-ready ledger abstraction)
+- wallet linking (challenge/signature verification)
 
 Persistence is currently in-memory through repository adapters, which keeps domain boundaries stable while backend storage is upgraded in later steps.
 
@@ -77,6 +78,7 @@ Production plumbing now includes:
 - `GET /ready` and `GET /api/ready` for readiness
 - `GET /api/contract` for contract metadata
 - `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `GET /auth/session` for auth session flow
+- `POST /auth/wallet/challenge`, `POST /auth/wallet/link`, `GET /auth/wallet`, `DELETE /auth/wallet` for wallet linking
 
 ## Baseline documentation
 

@@ -40,6 +40,9 @@ import { RewardsService } from "./modules/rewards/rewards.service.js";
 import { createUsersRouter } from "./modules/users/users.controller.js";
 import { InMemoryUsersRepository } from "./modules/users/users.repository.js";
 import { UsersService } from "./modules/users/users.service.js";
+import { createWalletRouter } from "./modules/wallet/wallet.controller.js";
+import { InMemoryWalletRepository } from "./modules/wallet/wallet.repository.js";
+import { WalletService } from "./modules/wallet/wallet.service.js";
 import { RBAC_ROLES } from "./shared/rbac.js";
 
 function buildCorsOrigin(origins: string[]): CorsOptions["origin"] {
@@ -65,6 +68,7 @@ export function createApp(env: AppEnv): express.Express {
   const notificationsRepository = new InMemoryNotificationsRepository(store);
   const billingRepository = new InMemoryBillingRepository(store);
   const rewardsRepository = new InMemoryRewardsRepository(store);
+  const walletRepository = new InMemoryWalletRepository(store);
   const businessOpsRepository = new InMemoryBusinessOpsRepository();
 
   const authService = new AuthService(authRepository, {
@@ -83,6 +87,7 @@ export function createApp(env: AppEnv): express.Express {
   });
   const billingService = new BillingService(billingRepository);
   const rewardsService = new RewardsService(rewardsRepository);
+  const walletService = new WalletService(walletRepository, env.serviceName);
   const businessOpsService = new BusinessOpsService(businessOpsRepository);
 
   if (env.bootstrapAdminEmail && env.bootstrapAdminPassword) {
@@ -139,6 +144,8 @@ export function createApp(env: AppEnv): express.Express {
         notificationAuditLogs: store.notificationAuditLogs.length,
         billingCustomers: store.billingCustomers.length,
         rewardEntries: store.rewardLedger.length,
+        walletLinks: store.walletLinks.length,
+        walletChallenges: store.walletChallenges.length,
         businessOps: businessOpsService.counts(),
       },
     });
@@ -171,6 +178,8 @@ export function createApp(env: AppEnv): express.Express {
         notificationAuditLogs: store.notificationAuditLogs.length,
         billingCustomers: store.billingCustomers.length,
         rewardEntries: store.rewardLedger.length,
+        walletLinks: store.walletLinks.length,
+        walletChallenges: store.walletChallenges.length,
         businessOps: businessOpsService.counts(),
       },
     };
@@ -208,6 +217,7 @@ export function createApp(env: AppEnv): express.Express {
   app.post("/api/auth/logout", authController.logoutHandler);
   app.get("/api/auth/me", authController.meHandler);
   app.get("/api/auth/session", authController.sessionHandler);
+  app.use("/auth/wallet", requireSession, createWalletRouter(walletService));
 
   app.use("/users", requireSession, requireOwnerAdmin, createUsersRouter(usersService));
   app.use(

@@ -14,7 +14,7 @@ export interface ApiContractDocument {
 export function buildApiContract(serviceName: string): ApiContractDocument {
   return {
     name: serviceName,
-    version: "3.3.0-notification-queue",
+    version: "3.4.0-wallet-linking",
     generatedAt: new Date().toISOString(),
     routes: [
       { method: "GET", path: "/", summary: "Service identity" },
@@ -37,6 +37,10 @@ export function buildApiContract(serviceName: string): ApiContractDocument {
       { method: "POST", path: "/api/auth/logout", summary: "Alias for logout" },
       { method: "GET", path: "/api/auth/me", summary: "Alias for me" },
       { method: "GET", path: "/api/auth/session", summary: "Alias for session" },
+      { method: "GET", path: "/auth/wallet", summary: "Get linked wallet for current session user" },
+      { method: "POST", path: "/auth/wallet/challenge", summary: "Create wallet signature challenge" },
+      { method: "POST", path: "/auth/wallet/link", summary: "Verify signature and link wallet" },
+      { method: "DELETE", path: "/auth/wallet", summary: "Unlink wallet from current user" },
       { method: "GET", path: "/users", summary: "List users" },
       { method: "PATCH", path: "/users/:id/role", summary: "Update user role" },
       { method: "GET", path: "/articles", summary: "List articles" },
