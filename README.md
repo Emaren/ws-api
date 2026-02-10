@@ -72,6 +72,7 @@ Production plumbing now includes:
 - `npm run start`
 - `npm run verify`
 - `npm run ci:migrations`
+- `npm run smoke:http`
 
 ## CI gates
 
@@ -106,3 +107,4 @@ The workflow always writes a gate summary table and fails the run if any gate is
 - `docs/repo-health.md`
 - `docs/module-architecture.md`
 - `docs/api-contract.md`
+- `docs/deploy-runbook.md`

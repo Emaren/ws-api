@@ -15,6 +15,7 @@ This file defines the minimum reliable checks and hygiene standards for `ws-api`
 - `npm run build`
 - `npm run verify`
 - `npm run ci:migrations`
+- `npm run smoke:http`
 
 ## Local verification flow
 
@@ -37,6 +38,14 @@ npm run ci:migrations
 - Workflow: `.github/workflows/ci.yml`
 - Gate order: migrations -> lint -> test -> build
 - Reporting: writes a gate status table to the GitHub Actions step summary and fails if any gate is not `PASS`.
+
+## Production smoke flow
+
+After deploy on hel1:
+
+```bash
+BASE_URL=http://127.0.0.1:3310 PUBLIC_URL=https://api.wheatandstone.ca npm run smoke:http
+```
 
 ## Environment hygiene
 

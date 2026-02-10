@@ -11,7 +11,8 @@
     "lint": "npm run typecheck",
     "test": "tsx --test \"src/**/*.test.ts\"",
     "verify": "npm run lint && npm run test && npm run build",
-    "ci:migrations": "node scripts/ci-migrations-check.mjs"
+    "ci:migrations": "node scripts/ci-migrations-check.mjs",
+    "smoke:http": "bash scripts/smoke-http.sh"
   },
   "keywords": [],
   "author": "",
