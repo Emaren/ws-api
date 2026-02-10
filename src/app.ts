@@ -32,6 +32,7 @@ import { InMemoryInventoryRepository } from "./modules/inventory/inventory.repos
 import { InventoryService } from "./modules/inventory/inventory.service.js";
 import { createNotificationsRouter } from "./modules/notifications/notifications.controller.js";
 import { InMemoryNotificationsRepository } from "./modules/notifications/notifications.repository.js";
+import { buildNotificationProviderRegistry } from "./modules/notifications/providers/provider-registry.js";
 import { NotificationsService } from "./modules/notifications/notifications.service.js";
 import { createRewardsRouter } from "./modules/rewards/rewards.controller.js";
 import { InMemoryRewardsRepository } from "./modules/rewards/rewards.repository.js";
@@ -73,7 +74,13 @@ export function createApp(env: AppEnv): express.Express {
   const articlesService = new ArticlesService(articlesRepository);
   const businessesService = new BusinessesService(businessesRepository);
   const inventoryService = new InventoryService(inventoryRepository);
-  const notificationsService = new NotificationsService(notificationsRepository);
+  const notificationsService = new NotificationsService(notificationsRepository, {
+    providers: buildNotificationProviderRegistry(env),
+    defaultMaxAttempts: env.notificationMaxAttempts,
+    retryBaseMs: env.notificationRetryBaseMs,
+    retryMaxMs: env.notificationRetryMaxMs,
+    logLevel: env.logLevel,
+  });
   const billingService = new BillingService(billingRepository);
   const rewardsService = new RewardsService(rewardsRepository);
   const businessOpsService = new BusinessOpsService(businessOpsRepository);
@@ -129,6 +136,7 @@ export function createApp(env: AppEnv): express.Express {
         businesses: store.businesses.length,
         inventoryItems: store.inventoryItems.length,
         notifications: store.notifications.length,
+        notificationAuditLogs: store.notificationAuditLogs.length,
         billingCustomers: store.billingCustomers.length,
         rewardEntries: store.rewardLedger.length,
         businessOps: businessOpsService.counts(),
@@ -160,6 +168,7 @@ export function createApp(env: AppEnv): express.Express {
         businesses: store.businesses.length,
         inventoryItems: store.inventoryItems.length,
         notifications: store.notifications.length,
+        notificationAuditLogs: store.notificationAuditLogs.length,
         billingCustomers: store.billingCustomers.length,
         rewardEntries: store.rewardLedger.length,
         businessOps: businessOpsService.counts(),

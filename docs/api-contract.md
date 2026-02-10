@@ -1,4 +1,4 @@
-# ws-api contract (v4a article lifecycle)
+# ws-api contract (v8a notification queue)
 
 Updated: 2026-02-10
 
@@ -44,7 +44,13 @@ Legacy aliases preserved:
 - `DELETE /articles/:slug` delete with ownership and role checks
 - Businesses: `GET /businesses`, `POST /businesses`
 - Inventory: `GET /inventory/items`, `POST /inventory/items`
-- Notifications: `GET /notifications/jobs`, `POST /notifications/jobs`
+- Notifications:
+- `GET /notifications/jobs`
+- `POST /notifications/jobs`
+- `POST /notifications/jobs/process`
+- `POST /notifications/jobs/:id/retry`
+- `GET /notifications/audit`
+- `GET /notifications/jobs/:id/audit`
 - Billing: `GET /billing/customers`, `POST /billing/customers`
 - Rewards: `GET /rewards/ledger`, `POST /rewards/ledger`
 

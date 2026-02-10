@@ -4,6 +4,7 @@ import type { LogLevel } from "../shared/logger.js";
 dotenv.config();
 
 type NodeEnv = "development" | "test" | "production";
+type NotificationEmailProviderName = "resend" | "dev";
 
 function readTrimmedEnv(name: string): string | undefined {
   const rawValue = process.env[name];
@@ -99,6 +100,32 @@ function parseBoolean(rawValue: string | undefined, fallback: boolean): boolean 
   throw new Error(`Invalid boolean value: ${rawValue}`);
 }
 
+function parseNotificationProviderName(
+  rawValue: string | undefined,
+): NotificationEmailProviderName {
+  if (!rawValue) {
+    return "dev";
+  }
+
+  const value = rawValue.toLowerCase();
+  if (value === "resend" || value === "dev") {
+    return value;
+  }
+
+  throw new Error(`Invalid NOTIFICATION_EMAIL_PROVIDER value: ${rawValue}`);
+}
+
+function parseUrl(rawValue: string | undefined, fallback: string, label: string): string {
+  const value = rawValue ?? fallback;
+  try {
+    // eslint-disable-next-line no-new
+    new URL(value);
+  } catch {
+    throw new Error(`${label} must be a valid URL`);
+  }
+  return value;
+}
+
 function isLikelyEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
@@ -114,6 +141,14 @@ export interface AppEnv {
   bootstrapAdminEmail: string | undefined;
   bootstrapAdminPassword: string | undefined;
   bootstrapAdminName: string;
+  notificationMaxAttempts: number;
+  notificationRetryBaseMs: number;
+  notificationRetryMaxMs: number;
+  notificationDefaultSubject: string;
+  notificationEmailProvider: NotificationEmailProviderName;
+  notificationEmailApiKey: string | undefined;
+  notificationEmailFrom: string | undefined;
+  notificationEmailApiBaseUrl: string;
 }
 
 function validateEnv(env: AppEnv): AppEnv {
@@ -150,6 +185,35 @@ function validateEnv(env: AppEnv): AppEnv {
     throw new Error("AUTH_SESSION_TTL_SECONDS must be at least 60");
   }
 
+  if (env.notificationMaxAttempts < 1) {
+    throw new Error("NOTIFICATION_MAX_ATTEMPTS must be at least 1");
+  }
+
+  if (env.notificationRetryBaseMs < 100) {
+    throw new Error("NOTIFICATION_RETRY_BASE_MS must be at least 100");
+  }
+
+  if (env.notificationRetryMaxMs < env.notificationRetryBaseMs) {
+    throw new Error("NOTIFICATION_RETRY_MAX_MS must be >= NOTIFICATION_RETRY_BASE_MS");
+  }
+
+  if (!env.notificationDefaultSubject.trim()) {
+    throw new Error("NOTIFICATION_DEFAULT_SUBJECT must be non-empty");
+  }
+
+  if (
+    env.notificationEmailProvider === "resend" &&
+    (!env.notificationEmailApiKey || !env.notificationEmailFrom)
+  ) {
+    throw new Error(
+      "NOTIFICATION_EMAIL_PROVIDER=resend requires NOTIFICATION_EMAIL_API_KEY and NOTIFICATION_EMAIL_FROM",
+    );
+  }
+
+  if (env.notificationEmailFrom && !isLikelyEmail(env.notificationEmailFrom)) {
+    throw new Error("NOTIFICATION_EMAIL_FROM must be a valid email");
+  }
+
   return env;
 }
 
@@ -172,6 +236,33 @@ export function loadEnv(): AppEnv {
     bootstrapAdminEmail: readTrimmedEnv("BOOTSTRAP_ADMIN_EMAIL"),
     bootstrapAdminPassword: readTrimmedEnv("BOOTSTRAP_ADMIN_PASSWORD"),
     bootstrapAdminName: readTrimmedEnv("BOOTSTRAP_ADMIN_NAME") ?? "Owner",
+    notificationMaxAttempts: parsePositiveInt(
+      readTrimmedEnv("NOTIFICATION_MAX_ATTEMPTS"),
+      3,
+      "NOTIFICATION_MAX_ATTEMPTS",
+    ),
+    notificationRetryBaseMs: parsePositiveInt(
+      readTrimmedEnv("NOTIFICATION_RETRY_BASE_MS"),
+      1_000,
+      "NOTIFICATION_RETRY_BASE_MS",
+    ),
+    notificationRetryMaxMs: parsePositiveInt(
+      readTrimmedEnv("NOTIFICATION_RETRY_MAX_MS"),
+      60_000,
+      "NOTIFICATION_RETRY_MAX_MS",
+    ),
+    notificationDefaultSubject:
+      readTrimmedEnv("NOTIFICATION_DEFAULT_SUBJECT") ?? "Wheat & Stone Notification",
+    notificationEmailProvider: parseNotificationProviderName(
+      readTrimmedEnv("NOTIFICATION_EMAIL_PROVIDER"),
+    ),
+    notificationEmailApiKey: readTrimmedEnv("NOTIFICATION_EMAIL_API_KEY"),
+    notificationEmailFrom: readTrimmedEnv("NOTIFICATION_EMAIL_FROM"),
+    notificationEmailApiBaseUrl: parseUrl(
+      readTrimmedEnv("NOTIFICATION_EMAIL_API_BASE_URL"),
+      "https://api.resend.com",
+      "NOTIFICATION_EMAIL_API_BASE_URL",
+    ),
   };
 
   return validateEnv(env);

@@ -22,6 +22,14 @@ async function startTestServer() {
     bootstrapAdminEmail: "owner@test.local",
     bootstrapAdminPassword: "ownerpass123",
     bootstrapAdminName: "Owner",
+    notificationMaxAttempts: 3,
+    notificationRetryBaseMs: 5,
+    notificationRetryMaxMs: 50,
+    notificationDefaultSubject: "Test Notification",
+    notificationEmailProvider: "dev",
+    notificationEmailApiKey: undefined,
+    notificationEmailFrom: undefined,
+    notificationEmailApiBaseUrl: "https://api.resend.com",
   };
 
   const app = createApp(env);

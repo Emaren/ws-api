@@ -73,15 +73,52 @@ export interface InventoryItemRecord {
 }
 
 export type NotificationChannel = "email" | "sms" | "push";
-export type NotificationStatus = "queued" | "sent" | "failed";
+export type NotificationStatus =
+  | "queued"
+  | "processing"
+  | "retrying"
+  | "sent"
+  | "failed";
+
+export type NotificationAuditEvent =
+  | "queued"
+  | "attempt_started"
+  | "attempt_succeeded"
+  | "attempt_failed"
+  | "retry_scheduled"
+  | "failed_final"
+  | "retry_requested";
 
 export interface NotificationJobRecord {
   id: string;
   businessId: string;
   channel: NotificationChannel;
   audience: string;
+  subject: string | null;
   message: string;
+  metadata: Record<string, unknown> | null;
   status: NotificationStatus;
+  provider: string | null;
+  attempts: number;
+  maxAttempts: number;
+  nextAttemptAt: string;
+  lastAttemptAt: string | null;
+  sentAt: string | null;
+  failedAt: string | null;
+  lastError: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationAuditLogRecord {
+  id: string;
+  jobId: string;
+  event: NotificationAuditEvent;
+  channel: NotificationChannel;
+  provider: string | null;
+  attempt: number | null;
+  message: string;
+  detail: Record<string, unknown> | null;
   createdAt: string;
 }
 

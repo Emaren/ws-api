@@ -28,6 +28,12 @@ Updated: 2026-02-10
 3. mount routers and compatibility aliases
 4. apply production middleware (request context, request logging, not-found + error handling)
 
+Notification module notes:
+
+- Provider abstraction is channel-based (`email`, `sms`, `push`).
+- Email supports live Resend delivery when configured; otherwise dev adapter is used.
+- Jobs are queued and processed with retry/backoff semantics plus immutable audit logs.
+
 Compatibility routes preserved:
 
 - `POST /login`

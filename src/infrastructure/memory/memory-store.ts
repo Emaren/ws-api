@@ -4,6 +4,7 @@ import type {
   BillingCustomerRecord,
   BusinessRecord,
   InventoryItemRecord,
+  NotificationAuditLogRecord,
   NotificationJobRecord,
   RewardLedgerEntryRecord,
   UserRecord,
@@ -16,6 +17,7 @@ export interface MemoryStore {
   businesses: BusinessRecord[];
   inventoryItems: InventoryItemRecord[];
   notifications: NotificationJobRecord[];
+  notificationAuditLogs: NotificationAuditLogRecord[];
   billingCustomers: BillingCustomerRecord[];
   rewardLedger: RewardLedgerEntryRecord[];
 }
@@ -28,6 +30,7 @@ export function createMemoryStore(): MemoryStore {
     businesses: [],
     inventoryItems: [],
     notifications: [],
+    notificationAuditLogs: [],
     billingCustomers: [],
     rewardLedger: [],
   };

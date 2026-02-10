@@ -14,7 +14,7 @@ export interface ApiContractDocument {
 export function buildApiContract(serviceName: string): ApiContractDocument {
   return {
     name: serviceName,
-    version: "3.2.0-dynamic-pricing",
+    version: "3.3.0-notification-queue",
     generatedAt: new Date().toISOString(),
     routes: [
       { method: "GET", path: "/", summary: "Service identity" },
@@ -49,7 +49,11 @@ export function buildApiContract(serviceName: string): ApiContractDocument {
       { method: "GET", path: "/inventory/items", summary: "List inventory items" },
       { method: "POST", path: "/inventory/items", summary: "Create inventory item" },
       { method: "GET", path: "/notifications/jobs", summary: "List notification jobs" },
+      { method: "GET", path: "/notifications/audit", summary: "List notification audit logs" },
+      { method: "GET", path: "/notifications/jobs/:id/audit", summary: "List audit logs for a single job" },
       { method: "POST", path: "/notifications/jobs", summary: "Queue notification job" },
+      { method: "POST", path: "/notifications/jobs/process", summary: "Process due notification queue jobs" },
+      { method: "POST", path: "/notifications/jobs/:id/retry", summary: "Force a notification job retry" },
       { method: "GET", path: "/billing/customers", summary: "List billing customers" },
       { method: "POST", path: "/billing/customers", summary: "Create billing customer" },
       { method: "GET", path: "/rewards/ledger", summary: "List reward ledger entries" },
