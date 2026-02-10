@@ -8,6 +8,25 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const serviceName = process.env.SERVICE_NAME || "ws-api";
+const startedAt = Date.now();
+
+app.get("/", (_req, res) => {
+  return res.json({ service: serviceName, ok: true });
+});
+
+app.get("/health", (_req, res) => {
+  return res.json({
+    status: "ok",
+    service: serviceName,
+    uptime_s: Math.floor((Date.now() - startedAt) / 1000),
+  });
+});
+
+app.get("/ping", (_req, res) => {
+  return res.json({ status: "ok" });
+});
+
 const users: { email: string; password: string }[] = []; // TEMP user store
 
 app.post("/login", (req, res) => {
