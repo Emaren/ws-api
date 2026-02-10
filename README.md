@@ -25,6 +25,7 @@ Production plumbing now includes:
 - health/readiness endpoints
 - machine-readable API contract endpoint
 - RBAC enforcement with role model `OWNER/ADMIN/EDITOR/CONTRIBUTOR/USER`
+- article lifecycle + ownership enforcement (`DRAFT/REVIEW/PUBLISHED/ARCHIVED`)
 
 ## Tech stack
 

@@ -4,7 +4,11 @@ import type { CorsOptions } from "cors";
 import type { AppEnv } from "./config/env.js";
 import { buildApiContract } from "./contracts/api-contract.js";
 import { createMemoryStore } from "./infrastructure/memory/memory-store.js";
-import { createRequireRoles, createRequireSession } from "./middleware/authz.js";
+import {
+  createRequireRoles,
+  createRequireSession,
+  createResolveSession,
+} from "./middleware/authz.js";
 import { createErrorHandler, notFoundHandler } from "./middleware/error-handler.js";
 import { requestContextMiddleware } from "./middleware/request-context.js";
 import { createRequestLogger } from "./middleware/request-logger.js";
@@ -86,6 +90,9 @@ export function createApp(env: AppEnv): express.Express {
     logLevel: env.logLevel,
   });
   const requireSession = createRequireSession(authService, {
+    logLevel: env.logLevel,
+  });
+  const resolveSession = createResolveSession(authService, {
     logLevel: env.logLevel,
   });
   const requireOwnerAdmin = createRequireRoles(RBAC_ROLES.ownerAdmin, {
@@ -190,6 +197,7 @@ export function createApp(env: AppEnv): express.Express {
   app.use(
     "/articles",
     createArticlesRouter(articlesService, {
+      resolveSession,
       requireSession,
       requireEditorial,
     }),

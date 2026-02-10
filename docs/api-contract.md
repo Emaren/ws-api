@@ -1,4 +1,4 @@
-# ws-api contract (v2b baseline)
+# ws-api contract (v4a article lifecycle)
 
 Updated: 2026-02-10
 
@@ -36,12 +36,27 @@ Legacy aliases preserved:
 ## Domain routes
 
 - Users: `GET /users`, `PATCH /users/:id/role`
-- Articles: `GET /articles`, `POST /articles`
+- Articles:
+- `GET /articles` public published list; authenticated editorial roles get role-aware draft/review visibility
+- `GET /articles/:slug` published public; draft/review/archived only for owner/staff
+- `POST /articles` create article with `draft/review/published/archived` lifecycle rules
+- `PATCH /articles/:slug` update content + lifecycle transition
+- `DELETE /articles/:slug` delete with ownership and role checks
 - Businesses: `GET /businesses`, `POST /businesses`
 - Inventory: `GET /inventory/items`, `POST /inventory/items`
 - Notifications: `GET /notifications/jobs`, `POST /notifications/jobs`
 - Billing: `GET /billing/customers`, `POST /billing/customers`
 - Rewards: `GET /rewards/ledger`, `POST /rewards/ledger`
+
+## Article lifecycle
+
+- Statuses: `DRAFT`, `REVIEW`, `PUBLISHED`, `ARCHIVED`
+- Contributors can only transition own articles between `DRAFT <-> REVIEW`
+- Owner/Admin/Editor can apply full lifecycle transitions:
+- `DRAFT -> REVIEW|ARCHIVED`
+- `REVIEW -> DRAFT|PUBLISHED|ARCHIVED`
+- `PUBLISHED -> ARCHIVED`
+- `ARCHIVED -> DRAFT`
 
 ## RBAC role model
 

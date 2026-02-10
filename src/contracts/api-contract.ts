@@ -14,7 +14,7 @@ export interface ApiContractDocument {
 export function buildApiContract(serviceName: string): ApiContractDocument {
   return {
     name: serviceName,
-    version: "3.0.0-auth-sessions",
+    version: "3.1.0-article-lifecycle",
     generatedAt: new Date().toISOString(),
     routes: [
       { method: "GET", path: "/", summary: "Service identity" },
@@ -40,7 +40,10 @@ export function buildApiContract(serviceName: string): ApiContractDocument {
       { method: "GET", path: "/users", summary: "List users" },
       { method: "PATCH", path: "/users/:id/role", summary: "Update user role" },
       { method: "GET", path: "/articles", summary: "List articles" },
+      { method: "GET", path: "/articles/:slug", summary: "Get article by slug" },
       { method: "POST", path: "/articles", summary: "Create article" },
+      { method: "PATCH", path: "/articles/:slug", summary: "Update article" },
+      { method: "DELETE", path: "/articles/:slug", summary: "Delete article" },
       { method: "GET", path: "/businesses", summary: "List businesses" },
       { method: "POST", path: "/businesses", summary: "Create business" },
       { method: "GET", path: "/inventory/items", summary: "List inventory items" },

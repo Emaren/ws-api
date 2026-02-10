@@ -39,6 +39,31 @@ export function createRequireSession(
   };
 }
 
+export function createResolveSession(
+  authService: AuthService,
+  options?: { logLevel?: string },
+): RequestHandler {
+  return (req, res, next) => {
+    const token = bearerTokenFromRequest(req);
+    if (!token) {
+      next();
+      return;
+    }
+
+    try {
+      const principal = authService.getSession(token);
+      res.locals.principal = principal;
+      next();
+    } catch (error) {
+      respondWithError(res, error, {
+        logLevel: options?.logLevel,
+        method: req.method,
+        path: req.originalUrl,
+      });
+    }
+  };
+}
+
 export function createRequireRoles(
   allowedRoles: readonly UserRole[],
   options?: { logLevel?: string },

@@ -34,7 +34,7 @@ export function toPublicAuthSession(session: AuthSessionRecord): PublicAuthSessi
   return safe;
 }
 
-export type ArticleStatus = "DRAFT" | "PUBLISHED";
+export type ArticleStatus = "DRAFT" | "REVIEW" | "PUBLISHED" | "ARCHIVED";
 
 export interface ArticleRecord {
   id: string;
