@@ -43,6 +43,11 @@ export interface NotificationsServiceOptions {
   logLevel: LogLevel;
 }
 
+interface NotificationFallbackTargets {
+  emailAudience: string | null;
+  smsAudience: string | null;
+}
+
 export class NotificationsService {
   constructor(
     private readonly notificationsRepository: NotificationsRepository,
@@ -63,6 +68,7 @@ export class NotificationsService {
     const message = input.message.trim();
     const audience = input.audience.trim() || "all";
     const subject = input.subject?.trim() || null;
+    const metadata = input.metadata ?? null;
 
     if (!businessId || !message) {
       throw new HttpError(400, "Missing businessId or message");
@@ -80,9 +86,13 @@ export class NotificationsService {
       throw new HttpError(400, "maxAttempts must be between 1 and 10");
     }
 
-    if (input.metadata && Array.isArray(input.metadata)) {
+    if (metadata && Array.isArray(metadata)) {
       throw new HttpError(400, "metadata must be an object");
     }
+
+    const scheduledFor = this.readScheduledFor(metadata);
+    const nextAttemptAt =
+      scheduledFor && scheduledFor > nowIso() ? scheduledFor : nowIso();
 
     const job = this.notificationsRepository.create({
       businessId,
@@ -90,10 +100,10 @@ export class NotificationsService {
       audience,
       subject,
       message,
-      metadata: input.metadata ?? null,
+      metadata,
       status: "queued",
       maxAttempts,
-      nextAttemptAt: nowIso(),
+      nextAttemptAt,
     });
 
     this.notificationsRepository.createAuditLog({
@@ -106,6 +116,7 @@ export class NotificationsService {
       detail: {
         audience: job.audience,
         maxAttempts: job.maxAttempts,
+        scheduledFor,
       },
     });
 
@@ -115,6 +126,7 @@ export class NotificationsService {
       channel: job.channel,
       audience: job.audience,
       maxAttempts: job.maxAttempts,
+      scheduledFor,
     });
 
     return job;
@@ -215,6 +227,152 @@ export class NotificationsService {
       return error.message;
     }
     return String(error);
+  }
+
+  private normalizeAudience(value: unknown): string | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  private readScheduledFor(metadata: Record<string, unknown> | null): string | null {
+    const scheduledValue = metadata?.scheduledFor;
+    if (typeof scheduledValue !== "string") {
+      return null;
+    }
+
+    const normalized = scheduledValue.trim();
+    if (!normalized) {
+      return null;
+    }
+
+    const scheduledMs = Date.parse(normalized);
+    if (!Number.isFinite(scheduledMs)) {
+      return null;
+    }
+
+    return new Date(scheduledMs).toISOString();
+  }
+
+  private readFallbackTargets(metadata: Record<string, unknown> | null): NotificationFallbackTargets {
+    const fallbackMetadata =
+      metadata &&
+      typeof metadata.fallback === "object" &&
+      !Array.isArray(metadata.fallback)
+        ? (metadata.fallback as Record<string, unknown>)
+        : null;
+
+    const emailAudience =
+      this.normalizeAudience(fallbackMetadata?.emailAudience) ??
+      this.normalizeAudience(metadata?.fallbackEmailAudience);
+    const smsAudience =
+      this.normalizeAudience(fallbackMetadata?.smsAudience) ??
+      this.normalizeAudience(metadata?.fallbackSmsAudience);
+
+    return {
+      emailAudience,
+      smsAudience,
+    };
+  }
+
+  private fallbackMetadata(
+    job: NotificationJobRecord,
+    reason: string,
+    fallbackChannel: NotificationChannel,
+  ): Record<string, unknown> {
+    const source = job.metadata && !Array.isArray(job.metadata) ? { ...job.metadata } : {};
+    delete source.fallback;
+    delete source.fallbackEmailAudience;
+    delete source.fallbackSmsAudience;
+
+    return {
+      ...source,
+      source: "push-fallback",
+      fallbackFromJobId: job.id,
+      fallbackFromChannel: job.channel,
+      fallbackToChannel: fallbackChannel,
+      fallbackReason: reason,
+      fallbackQueuedAt: nowIso(),
+    };
+  }
+
+  private queuePushFallbackJobs(
+    job: NotificationJobRecord,
+    provider: NotificationProvider,
+    attempt: number,
+    pushError: string,
+  ): { queuedJobs: NotificationJobRecord[]; skippedChannels: NotificationChannel[] } {
+    if (job.channel !== "push") {
+      return { queuedJobs: [], skippedChannels: [] };
+    }
+
+    const targets = this.readFallbackTargets(job.metadata);
+    const candidates: Array<{ channel: NotificationChannel; audience: string | null }> = [
+      { channel: "email", audience: targets.emailAudience },
+      { channel: "sms", audience: targets.smsAudience },
+    ];
+
+    const queuedJobs: NotificationJobRecord[] = [];
+    const skippedChannels: NotificationChannel[] = [];
+
+    for (const candidate of candidates) {
+      if (!candidate.audience) {
+        skippedChannels.push(candidate.channel);
+        continue;
+      }
+
+      const fallbackInput: QueueNotificationInput = {
+        businessId: job.businessId,
+        channel: candidate.channel,
+        audience: candidate.audience,
+        message: job.message,
+        maxAttempts: job.maxAttempts,
+        metadata: this.fallbackMetadata(job, pushError, candidate.channel),
+      };
+      if (candidate.channel === "email" && job.subject) {
+        fallbackInput.subject = job.subject;
+      }
+
+      const queued = this.queueNotification(fallbackInput);
+
+      queuedJobs.push(queued);
+    }
+
+    if (queuedJobs.length > 0) {
+      const fallbackDetail = {
+        pushProvider: provider.name,
+        pushAttempt: attempt,
+        pushError,
+        queuedFallbackJobIds: queuedJobs.map((entry) => entry.id),
+        queuedFallbackChannels: queuedJobs.map((entry) => entry.channel),
+      };
+
+      this.notificationsRepository.createAuditLog({
+        jobId: job.id,
+        event: "fallback_queued",
+        channel: job.channel,
+        provider: provider.name,
+        attempt,
+        message: "Push delivery failed; queued fallback notifications",
+        detail: fallbackDetail,
+      });
+
+      logEvent("warn", this.options.logLevel, "notification_push_fallback_queued", {
+        jobId: job.id,
+        pushProvider: provider.name,
+        pushAttempt: attempt,
+        queuedFallbackJobIds: queuedJobs.map((entry) => entry.id),
+        queuedFallbackChannels: queuedJobs.map((entry) => entry.channel),
+      });
+    }
+
+    return {
+      queuedJobs,
+      skippedChannels,
+    };
   }
 
   private async processJob(jobId: string): Promise<{
@@ -347,6 +505,26 @@ export class NotificationsService {
         error: message,
       },
     });
+
+    const fallback = this.queuePushFallbackJobs(job, provider, attempt, message);
+    if (fallback.queuedJobs.length > 0) {
+      const failedRecord = this.requireUpdated(
+        this.notificationsRepository.update(job.id, {
+          status: "failed",
+          provider: provider.name,
+          failedAt: nowIso(),
+          lastError:
+            `Push delivery failed. Fallback queued: ${fallback.queuedJobs
+              .map((entry) => entry.channel.toUpperCase())
+              .join(", ")}`,
+        }),
+      );
+
+      return {
+        outcome: "failed",
+        job: failedRecord,
+      };
+    }
 
     if (attempt >= job.maxAttempts) {
       const failedRecord = this.requireUpdated(

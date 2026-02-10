@@ -87,7 +87,8 @@ export type NotificationAuditEvent =
   | "attempt_failed"
   | "retry_scheduled"
   | "failed_final"
-  | "retry_requested";
+  | "retry_requested"
+  | "fallback_queued";
 
 export interface NotificationJobRecord {
   id: string;

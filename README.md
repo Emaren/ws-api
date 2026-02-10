@@ -57,6 +57,10 @@ Production plumbing now includes:
 - `BOOTSTRAP_ADMIN_EMAIL` optional bootstrap owner account email
 - `BOOTSTRAP_ADMIN_PASSWORD` optional bootstrap owner account password
 - `BOOTSTRAP_ADMIN_NAME` optional bootstrap owner display name
+- `NOTIFICATION_PUSH_PROVIDER` optional `noop|webpush` (default `noop`)
+- `NOTIFICATION_PUSH_VAPID_SUBJECT` optional VAPID subject (`mailto:` or URL)
+- `NOTIFICATION_PUSH_VAPID_PUBLIC_KEY` required when push provider is `webpush`
+- `NOTIFICATION_PUSH_VAPID_PRIVATE_KEY` required when push provider is `webpush`
 
 ## Scripts
 

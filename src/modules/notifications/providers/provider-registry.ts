@@ -5,11 +5,13 @@ import { DevEmailNotificationProvider } from "./dev-email.provider.js";
 import { NoopNotificationProvider } from "./noop.provider.js";
 import type { NotificationProvider } from "./provider.types.js";
 import { ResendEmailNotificationProvider } from "./resend-email.provider.js";
+import { WebPushNotificationProvider } from "./web-push.provider.js";
 
 export type NotificationProviderRegistry = Record<NotificationChannel, NotificationProvider>;
 
 export function buildNotificationProviderRegistry(env: AppEnv): NotificationProviderRegistry {
   let emailProvider: NotificationProvider;
+  let pushProvider: NotificationProvider;
   if (
     env.notificationEmailProvider === "resend" &&
     env.notificationEmailApiKey &&
@@ -32,10 +34,31 @@ export function buildNotificationProviderRegistry(env: AppEnv): NotificationProv
     });
   }
 
+  if (
+    env.notificationPushProvider === "webpush" &&
+    env.notificationPushVapidPublicKey &&
+    env.notificationPushVapidPrivateKey
+  ) {
+    pushProvider = new WebPushNotificationProvider({
+      vapidSubject: env.notificationPushVapidSubject,
+      vapidPublicKey: env.notificationPushVapidPublicKey,
+      vapidPrivateKey: env.notificationPushVapidPrivateKey,
+      defaultTitle: env.notificationDefaultSubject,
+    });
+  } else {
+    pushProvider = new NoopNotificationProvider("push");
+    logEvent("warn", env.logLevel, "notification_push_provider_fallback", {
+      configuredProvider: env.notificationPushProvider,
+      reason:
+        env.notificationPushProvider === "webpush"
+          ? "missing_notification_push_vapid_keys"
+          : "notification_push_provider_not_webpush",
+    });
+  }
+
   return {
     email: emailProvider,
     sms: new NoopNotificationProvider("sms"),
-    push: new NoopNotificationProvider("push"),
+    push: pushProvider,
   };
 }
-

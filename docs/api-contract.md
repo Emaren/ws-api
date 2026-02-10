@@ -1,4 +1,4 @@
-# ws-api contract (v8a notification queue)
+# ws-api contract (v13b push fallback)
 
 Updated: 2026-02-10
 
@@ -51,6 +51,8 @@ Legacy aliases preserved:
 - `POST /notifications/jobs/:id/retry`
 - `GET /notifications/audit`
 - `GET /notifications/jobs/:id/audit`
+- push jobs support `webpush:<base64url(subscription-json)>` direct audiences
+- push failures can queue metadata-configured fallback email/SMS jobs
 - Billing: `GET /billing/customers`, `POST /billing/customers`
 - Rewards:
 - `GET /rewards/rules`

@@ -32,6 +32,10 @@ async function startTestServer(
     notificationEmailApiKey: undefined,
     notificationEmailFrom: undefined,
     notificationEmailApiBaseUrl: "https://api.resend.com",
+    notificationPushProvider: "noop",
+    notificationPushVapidSubject: "mailto:notifications@wheatandstone.ca",
+    notificationPushVapidPublicKey: undefined,
+    notificationPushVapidPrivateKey: undefined,
   };
 
   const app = createApp(env);
@@ -232,6 +236,110 @@ test("notifications queue retries and fails permanently when provider stays unav
     assert.ok(events.includes("retry_scheduled"));
     assert.ok(events.includes("retry_requested"));
     assert.ok(events.includes("failed_final"));
+  } finally {
+    await server.close();
+  }
+});
+
+test("push delivery queues graceful email/sms fallback jobs when push fails", async () => {
+  const server = await startTestServer();
+
+  try {
+    const ownerToken = await loginOwner(server.baseUrl);
+
+    const enqueue = await requestJson(server.baseUrl, "/notifications/jobs", {
+      method: "POST",
+      token: ownerToken,
+      body: {
+        businessId: "biz-avalon",
+        channel: "push",
+        audience: "webpush:not-a-valid-subscription",
+        subject: "Push Launch",
+        message: "Fresh store offers are now live.",
+        metadata: {
+          campaignName: "Push Launch",
+          fallback: {
+            emailAudience: "alerts@example.com",
+            smsAudience: "+17801230000",
+          },
+        },
+      },
+    });
+    assert.equal(enqueue.status, 201);
+    const pushJobId = enqueue.body?.id as string;
+
+    const firstRun = await requestJson(server.baseUrl, "/notifications/jobs/process", {
+      method: "POST",
+      token: ownerToken,
+      body: { limit: 10 },
+    });
+    assert.equal(firstRun.status, 200);
+    assert.equal(firstRun.body?.processed, 1);
+    assert.equal(firstRun.body?.failed, 1);
+
+    const pushJobs = await requestJson(
+      server.baseUrl,
+      "/notifications/jobs?status=failed&channel=push",
+      {
+        token: ownerToken,
+      },
+    );
+    assert.equal(pushJobs.status, 200);
+    assert.equal(pushJobs.body.length, 1);
+    assert.equal(pushJobs.body[0]?.id, pushJobId);
+    assert.match(
+      String(pushJobs.body[0]?.lastError),
+      /Fallback queued/i,
+    );
+
+    const queuedEmail = await requestJson(
+      server.baseUrl,
+      "/notifications/jobs?status=queued&channel=email",
+      {
+        token: ownerToken,
+      },
+    );
+    assert.equal(queuedEmail.status, 200);
+    assert.equal(queuedEmail.body.length, 1);
+    assert.equal(
+      queuedEmail.body[0]?.metadata?.fallbackFromJobId,
+      pushJobId,
+    );
+
+    const queuedSms = await requestJson(
+      server.baseUrl,
+      "/notifications/jobs?status=queued&channel=sms",
+      {
+        token: ownerToken,
+      },
+    );
+    assert.equal(queuedSms.status, 200);
+    assert.equal(queuedSms.body.length, 1);
+    assert.equal(
+      queuedSms.body[0]?.metadata?.fallbackFromJobId,
+      pushJobId,
+    );
+
+    const pushAudit = await requestJson(
+      server.baseUrl,
+      `/notifications/jobs/${encodeURIComponent(pushJobId)}/audit`,
+      {
+        token: ownerToken,
+      },
+    );
+    assert.equal(pushAudit.status, 200);
+    const pushEvents = pushAudit.body.map((entry: { event: string }) => entry.event);
+    assert.ok(pushEvents.includes("fallback_queued"));
+
+    const secondRun = await requestJson(server.baseUrl, "/notifications/jobs/process", {
+      method: "POST",
+      token: ownerToken,
+      body: { limit: 10 },
+    });
+    assert.equal(secondRun.status, 200);
+    assert.equal(secondRun.body?.processed, 2);
+    assert.equal(secondRun.body?.sent, 1);
+    assert.equal(secondRun.body?.retried, 1);
   } finally {
     await server.close();
   }

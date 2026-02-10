@@ -14,7 +14,7 @@ export interface ApiContractDocument {
 export function buildApiContract(serviceName: string): ApiContractDocument {
   return {
     name: serviceName,
-    version: "3.5.0-reward-ledger-reporting",
+    version: "3.6.0-web-push-fallback",
     generatedAt: new Date().toISOString(),
     routes: [
       { method: "GET", path: "/", summary: "Service identity" },

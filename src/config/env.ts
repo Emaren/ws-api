@@ -5,6 +5,7 @@ dotenv.config();
 
 type NodeEnv = "development" | "test" | "production";
 type NotificationEmailProviderName = "resend" | "dev";
+type NotificationPushProviderName = "webpush" | "noop";
 
 function readTrimmedEnv(name: string): string | undefined {
   const rawValue = process.env[name];
@@ -115,6 +116,21 @@ function parseNotificationProviderName(
   throw new Error(`Invalid NOTIFICATION_EMAIL_PROVIDER value: ${rawValue}`);
 }
 
+function parseNotificationPushProviderName(
+  rawValue: string | undefined,
+): NotificationPushProviderName {
+  if (!rawValue) {
+    return "noop";
+  }
+
+  const value = rawValue.toLowerCase();
+  if (value === "webpush" || value === "noop") {
+    return value;
+  }
+
+  throw new Error(`Invalid NOTIFICATION_PUSH_PROVIDER value: ${rawValue}`);
+}
+
 function parseUrl(rawValue: string | undefined, fallback: string, label: string): string {
   const value = rawValue ?? fallback;
   try {
@@ -149,6 +165,10 @@ export interface AppEnv {
   notificationEmailApiKey: string | undefined;
   notificationEmailFrom: string | undefined;
   notificationEmailApiBaseUrl: string;
+  notificationPushProvider: NotificationPushProviderName;
+  notificationPushVapidSubject: string;
+  notificationPushVapidPublicKey: string | undefined;
+  notificationPushVapidPrivateKey: string | undefined;
 }
 
 function validateEnv(env: AppEnv): AppEnv {
@@ -214,6 +234,28 @@ function validateEnv(env: AppEnv): AppEnv {
     throw new Error("NOTIFICATION_EMAIL_FROM must be a valid email");
   }
 
+  if (
+    env.notificationPushProvider === "webpush" &&
+    (!env.notificationPushVapidPublicKey || !env.notificationPushVapidPrivateKey)
+  ) {
+    throw new Error(
+      "NOTIFICATION_PUSH_PROVIDER=webpush requires NOTIFICATION_PUSH_VAPID_PUBLIC_KEY and NOTIFICATION_PUSH_VAPID_PRIVATE_KEY",
+    );
+  }
+
+  if (
+    env.notificationPushProvider === "webpush" &&
+    !(
+      env.notificationPushVapidSubject.startsWith("mailto:") ||
+      env.notificationPushVapidSubject.startsWith("https://") ||
+      env.notificationPushVapidSubject.startsWith("http://")
+    )
+  ) {
+    throw new Error(
+      "NOTIFICATION_PUSH_VAPID_SUBJECT must start with mailto:, http://, or https://",
+    );
+  }
+
   return env;
 }
 
@@ -263,6 +305,14 @@ export function loadEnv(): AppEnv {
       "https://api.resend.com",
       "NOTIFICATION_EMAIL_API_BASE_URL",
     ),
+    notificationPushProvider: parseNotificationPushProviderName(
+      readTrimmedEnv("NOTIFICATION_PUSH_PROVIDER"),
+    ),
+    notificationPushVapidSubject:
+      readTrimmedEnv("NOTIFICATION_PUSH_VAPID_SUBJECT") ??
+      "mailto:notifications@wheatandstone.ca",
+    notificationPushVapidPublicKey: readTrimmedEnv("NOTIFICATION_PUSH_VAPID_PUBLIC_KEY"),
+    notificationPushVapidPrivateKey: readTrimmedEnv("NOTIFICATION_PUSH_VAPID_PRIVATE_KEY"),
   };
 
   return validateEnv(env);

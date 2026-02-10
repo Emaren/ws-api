@@ -30,6 +30,10 @@ async function startTestServer() {
     notificationEmailApiKey: undefined,
     notificationEmailFrom: undefined,
     notificationEmailApiBaseUrl: "https://api.resend.com",
+    notificationPushProvider: "noop",
+    notificationPushVapidSubject: "mailto:notifications@wheatandstone.ca",
+    notificationPushVapidPublicKey: undefined,
+    notificationPushVapidPrivateKey: undefined,
   };
 
   const app = createApp(env);
