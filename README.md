@@ -27,6 +27,8 @@ Production plumbing now includes:
 - machine-readable API contract endpoint
 - RBAC enforcement with role model `OWNER/ADMIN/EDITOR/CONTRIBUTOR/USER`
 - article lifecycle + ownership enforcement (`DRAFT/REVIEW/PUBLISHED/ARCHIVED`)
+- rule-driven off-chain rewards accrual with anti-abuse constraints
+- owner/admin reward reporting + export/settlement workflow for future on-chain payouts
 
 ## Tech stack
 
@@ -79,6 +81,7 @@ Production plumbing now includes:
 - `GET /api/contract` for contract metadata
 - `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `GET /auth/session` for auth session flow
 - `POST /auth/wallet/challenge`, `POST /auth/wallet/link`, `GET /auth/wallet`, `DELETE /auth/wallet` for wallet linking
+- `POST /rewards/accrual`, `GET /rewards/report`, `GET /rewards/export`, `POST /rewards/export/mark`, `POST /rewards/export/settle` for rewards ops
 
 ## Baseline documentation
 

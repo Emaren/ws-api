@@ -52,7 +52,15 @@ Legacy aliases preserved:
 - `GET /notifications/audit`
 - `GET /notifications/jobs/:id/audit`
 - Billing: `GET /billing/customers`, `POST /billing/customers`
-- Rewards: `GET /rewards/ledger`, `POST /rewards/ledger`
+- Rewards:
+- `GET /rewards/rules`
+- `GET /rewards/ledger`
+- `POST /rewards/accrual`
+- `POST /rewards/ledger` (owner/admin manual grant)
+- `GET /rewards/report` (owner/admin)
+- `GET /rewards/export` (owner/admin, json/csv)
+- `POST /rewards/export/mark` (owner/admin)
+- `POST /rewards/export/settle` (owner/admin)
 
 ## Article lifecycle
 

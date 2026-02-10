@@ -14,7 +14,7 @@ export interface ApiContractDocument {
 export function buildApiContract(serviceName: string): ApiContractDocument {
   return {
     name: serviceName,
-    version: "3.4.0-wallet-linking",
+    version: "3.5.0-reward-ledger-reporting",
     generatedAt: new Date().toISOString(),
     routes: [
       { method: "GET", path: "/", summary: "Service identity" },
@@ -60,8 +60,14 @@ export function buildApiContract(serviceName: string): ApiContractDocument {
       { method: "POST", path: "/notifications/jobs/:id/retry", summary: "Force a notification job retry" },
       { method: "GET", path: "/billing/customers", summary: "List billing customers" },
       { method: "POST", path: "/billing/customers", summary: "Create billing customer" },
+      { method: "GET", path: "/rewards/rules", summary: "List off-chain reward accrual rules" },
       { method: "GET", path: "/rewards/ledger", summary: "List reward ledger entries" },
-      { method: "POST", path: "/rewards/ledger", summary: "Create reward ledger entry" },
+      { method: "POST", path: "/rewards/accrual", summary: "Accrue off-chain rewards through rule engine" },
+      { method: "POST", path: "/rewards/ledger", summary: "Owner/Admin manual reward ledger grant" },
+      { method: "GET", path: "/rewards/report", summary: "Owner/Admin rewards accrual reporting summary" },
+      { method: "GET", path: "/rewards/export", summary: "Owner/Admin reward export preview (JSON/CSV)" },
+      { method: "POST", path: "/rewards/export/mark", summary: "Owner/Admin mark pending rewards as exported batch" },
+      { method: "POST", path: "/rewards/export/settle", summary: "Owner/Admin settle exported rewards with payout tx hash" },
       { method: "POST", path: "/ops/pricing/quote", summary: "Compute deterministic dynamic price quote" },
     ],
   };

@@ -137,15 +137,34 @@ export interface BillingCustomerRecord {
 }
 
 export type RewardToken = "WHEAT" | "STONE";
+export type RewardPayoutStatus = "PENDING" | "EXPORTED" | "PAID" | "VOID";
+
+export type RewardRuleId =
+  | "ARTICLE_VIEW_STONE"
+  | "ARTICLE_REACTION_STONE"
+  | "ARTICLE_PUBLISH_WHEAT"
+  | "DELIVERY_LEAD_WHEAT"
+  | "NOTIFICATION_OPT_IN_STONE"
+  | "MANUAL_GRANT";
 
 export interface RewardLedgerEntryRecord {
   id: string;
   userId: string;
   token: RewardToken;
   amount: number;
-  reason: string;
-  metadata: string | null;
+  reason: string; // human-readable narrative
+  ruleId: RewardRuleId;
+  sourceType: string | null;
+  sourceId: string | null;
+  idempotencyKey: string | null;
+  metadata: Record<string, unknown> | null;
+  payoutStatus: RewardPayoutStatus;
+  payoutBatchId: string | null;
+  payoutTxHash: string | null;
+  exportedAt: string | null;
+  settledAt: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 export type WalletChainType = "COSMOS";
