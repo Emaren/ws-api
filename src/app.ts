@@ -21,6 +21,9 @@ import { AuthService } from "./modules/auth/auth.service.js";
 import { createBillingRouter } from "./modules/billing/billing.controller.js";
 import { InMemoryBillingRepository } from "./modules/billing/billing.repository.js";
 import { BillingService } from "./modules/billing/billing.service.js";
+import { createBusinessOpsRouter } from "./modules/business-ops/business-ops.controller.js";
+import { InMemoryBusinessOpsRepository } from "./modules/business-ops/business-ops.repository.js";
+import { BusinessOpsService } from "./modules/business-ops/business-ops.service.js";
 import { createBusinessesRouter } from "./modules/businesses/businesses.controller.js";
 import { InMemoryBusinessesRepository } from "./modules/businesses/businesses.repository.js";
 import { BusinessesService } from "./modules/businesses/businesses.service.js";
@@ -61,6 +64,7 @@ export function createApp(env: AppEnv): express.Express {
   const notificationsRepository = new InMemoryNotificationsRepository(store);
   const billingRepository = new InMemoryBillingRepository(store);
   const rewardsRepository = new InMemoryRewardsRepository(store);
+  const businessOpsRepository = new InMemoryBusinessOpsRepository();
 
   const authService = new AuthService(authRepository, {
     sessionTtlSeconds: env.authSessionTtlSeconds,
@@ -72,6 +76,7 @@ export function createApp(env: AppEnv): express.Express {
   const notificationsService = new NotificationsService(notificationsRepository);
   const billingService = new BillingService(billingRepository);
   const rewardsService = new RewardsService(rewardsRepository);
+  const businessOpsService = new BusinessOpsService(businessOpsRepository);
 
   if (env.bootstrapAdminEmail && env.bootstrapAdminPassword) {
     try {
@@ -126,6 +131,7 @@ export function createApp(env: AppEnv): express.Express {
         notifications: store.notifications.length,
         billingCustomers: store.billingCustomers.length,
         rewardEntries: store.rewardLedger.length,
+        businessOps: businessOpsService.counts(),
       },
     });
   };
@@ -156,6 +162,7 @@ export function createApp(env: AppEnv): express.Express {
         notifications: store.notifications.length,
         billingCustomers: store.billingCustomers.length,
         rewardEntries: store.rewardLedger.length,
+        businessOps: businessOpsService.counts(),
       },
     };
 
@@ -212,6 +219,7 @@ export function createApp(env: AppEnv): express.Express {
   );
   app.use("/billing", requireSession, requireOwnerAdmin, createBillingRouter(billingService));
   app.use("/rewards", requireSession, requireAuthenticated, createRewardsRouter(rewardsService));
+  app.use("/ops", requireSession, requireStaff, createBusinessOpsRouter(businessOpsService));
   app.use(notFoundHandler);
   app.use(createErrorHandler(env.logLevel));
 
