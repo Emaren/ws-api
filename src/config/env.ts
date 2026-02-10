@@ -1,6 +1,9 @@
 import dotenv from "dotenv";
+import type { LogLevel } from "../shared/logger.js";
 
 dotenv.config();
+
+type NodeEnv = "development" | "test" | "production";
 
 function readTrimmedEnv(name: string): string | undefined {
   const rawValue = process.env[name];
@@ -37,22 +40,112 @@ function parseOrigins(rawValue: string | undefined): string[] {
     .filter((origin) => origin.length > 0);
 }
 
+function parseNodeEnv(rawValue: string | undefined): NodeEnv {
+  if (!rawValue) {
+    return "development";
+  }
+
+  if (rawValue === "development" || rawValue === "test" || rawValue === "production") {
+    return rawValue;
+  }
+
+  throw new Error(`Invalid NODE_ENV value: ${rawValue}`);
+}
+
+function parseLogLevel(rawValue: string | undefined): LogLevel {
+  if (!rawValue) {
+    return "info";
+  }
+
+  const value = rawValue.toLowerCase();
+  if (value === "debug" || value === "info" || value === "warn" || value === "error") {
+    return value;
+  }
+
+  throw new Error(`Invalid LOG_LEVEL value: ${rawValue}`);
+}
+
+function parseBoolean(rawValue: string | undefined, fallback: boolean): boolean {
+  if (!rawValue) {
+    return fallback;
+  }
+
+  const value = rawValue.toLowerCase();
+  if (value === "1" || value === "true" || value === "yes") {
+    return true;
+  }
+
+  if (value === "0" || value === "false" || value === "no") {
+    return false;
+  }
+
+  throw new Error(`Invalid boolean value: ${rawValue}`);
+}
+
+function isLikelyEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 export interface AppEnv {
+  nodeEnv: NodeEnv;
   serviceName: string;
   port: number;
+  logLevel: LogLevel;
   corsOrigins: string[];
+  allowWildcardCorsInProduction: boolean;
   bootstrapAdminEmail: string | undefined;
   bootstrapAdminPassword: string | undefined;
   bootstrapAdminName: string;
 }
 
+function validateEnv(env: AppEnv): AppEnv {
+  if (!env.serviceName.trim()) {
+    throw new Error("SERVICE_NAME must be non-empty");
+  }
+
+  const hasBootstrapEmail = Boolean(env.bootstrapAdminEmail);
+  const hasBootstrapPassword = Boolean(env.bootstrapAdminPassword);
+
+  if (hasBootstrapEmail !== hasBootstrapPassword) {
+    throw new Error("BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD must be set together");
+  }
+
+  if (env.bootstrapAdminEmail && !isLikelyEmail(env.bootstrapAdminEmail)) {
+    throw new Error("BOOTSTRAP_ADMIN_EMAIL must be a valid email");
+  }
+
+  if (env.bootstrapAdminPassword && env.bootstrapAdminPassword.length < 8) {
+    throw new Error("BOOTSTRAP_ADMIN_PASSWORD must be at least 8 characters");
+  }
+
+  if (
+    env.nodeEnv === "production" &&
+    env.corsOrigins.length === 0 &&
+    !env.allowWildcardCorsInProduction
+  ) {
+    throw new Error(
+      "In production, set CORS_ORIGINS or enable CORS_ALLOW_WILDCARD_IN_PROD=true",
+    );
+  }
+
+  return env;
+}
+
 export function loadEnv(): AppEnv {
-  return {
+  const env: AppEnv = {
+    nodeEnv: parseNodeEnv(readTrimmedEnv("NODE_ENV")),
     serviceName: readTrimmedEnv("SERVICE_NAME") ?? "ws-api",
     port: parsePort(readTrimmedEnv("PORT")),
+    logLevel: parseLogLevel(readTrimmedEnv("LOG_LEVEL")),
     corsOrigins: parseOrigins(readTrimmedEnv("CORS_ORIGINS")),
+    allowWildcardCorsInProduction: parseBoolean(
+      readTrimmedEnv("CORS_ALLOW_WILDCARD_IN_PROD"),
+      true,
+    ),
     bootstrapAdminEmail: readTrimmedEnv("BOOTSTRAP_ADMIN_EMAIL"),
     bootstrapAdminPassword: readTrimmedEnv("BOOTSTRAP_ADMIN_PASSWORD"),
     bootstrapAdminName: readTrimmedEnv("BOOTSTRAP_ADMIN_NAME") ?? "Owner",
   };
+
+  return validateEnv(env);
 }

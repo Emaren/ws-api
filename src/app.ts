@@ -2,7 +2,11 @@ import cors from "cors";
 import express, { type RequestHandler } from "express";
 import type { CorsOptions } from "cors";
 import type { AppEnv } from "./config/env.js";
+import { buildApiContract } from "./contracts/api-contract.js";
 import { createMemoryStore } from "./infrastructure/memory/memory-store.js";
+import { createErrorHandler, notFoundHandler } from "./middleware/error-handler.js";
+import { requestContextMiddleware } from "./middleware/request-context.js";
+import { createRequestLogger } from "./middleware/request-logger.js";
 import { createArticlesRouter } from "./modules/articles/articles.controller.js";
 import { InMemoryArticlesRepository } from "./modules/articles/articles.repository.js";
 import { ArticlesService } from "./modules/articles/articles.service.js";
@@ -37,6 +41,8 @@ export function createApp(env: AppEnv): express.Express {
   const startedAtMs = Date.now();
 
   app.use(cors({ origin: buildCorsOrigin(env.corsOrigins) }));
+  app.use(requestContextMiddleware);
+  app.use(createRequestLogger(env.logLevel));
   app.use(express.json());
 
   const store = createMemoryStore();
@@ -77,7 +83,11 @@ export function createApp(env: AppEnv): express.Express {
   const healthHandler: RequestHandler = (_req, res) => {
     res.json({
       status: "ok",
+      checks: {
+        process: "ok",
+      },
       service: env.serviceName,
+      nodeEnv: env.nodeEnv,
       uptime_s: Math.floor((Date.now() - startedAtMs) / 1000),
       modules: {
         users: store.users.length,
@@ -91,6 +101,42 @@ export function createApp(env: AppEnv): express.Express {
     });
   };
 
+  const readinessHandler: RequestHandler = (_req, res) => {
+    const bootstrapConfigured = Boolean(env.bootstrapAdminEmail && env.bootstrapAdminPassword);
+    const bootstrapReady =
+      !bootstrapConfigured ||
+      Boolean(usersRepository.findByEmail(env.bootstrapAdminEmail ?? ""));
+
+    const checks = {
+      env: "ok",
+      memoryStore: "ok",
+      bootstrapAdmin: bootstrapReady ? "ok" : "error",
+    } as const;
+
+    const ready = Object.values(checks).every((value) => value === "ok");
+    const payload = {
+      status: ready ? "ready" : "not_ready",
+      service: env.serviceName,
+      checks,
+      modules: {
+        users: store.users.length,
+        articles: store.articles.length,
+        businesses: store.businesses.length,
+        inventoryItems: store.inventoryItems.length,
+        notifications: store.notifications.length,
+        billingCustomers: store.billingCustomers.length,
+        rewardEntries: store.rewardLedger.length,
+      },
+    };
+
+    if (!ready) {
+      res.status(503).json(payload);
+      return;
+    }
+
+    res.json(payload);
+  };
+
   app.get("/", (_req, res) => {
     res.json({ service: env.serviceName, ok: true });
   });
@@ -101,6 +147,11 @@ export function createApp(env: AppEnv): express.Express {
 
   app.get("/health", healthHandler);
   app.get("/api/health", healthHandler);
+  app.get("/ready", readinessHandler);
+  app.get("/api/ready", readinessHandler);
+  app.get("/api/contract", (_req, res) => {
+    res.json(buildApiContract(env.serviceName));
+  });
 
   app.use("/auth", authController.router);
   app.post("/login", authController.loginHandler);
@@ -113,6 +164,8 @@ export function createApp(env: AppEnv): express.Express {
   app.use("/notifications", createNotificationsRouter(notificationsService));
   app.use("/billing", createBillingRouter(billingService));
   app.use("/rewards", createRewardsRouter(rewardsService));
+  app.use(notFoundHandler);
+  app.use(createErrorHandler(env.logLevel));
 
   return app;
 }

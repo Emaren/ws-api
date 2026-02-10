@@ -17,6 +17,14 @@ Backend API repository for WheatAndStone.
 
 Persistence is currently in-memory through repository adapters, which keeps domain boundaries stable while backend storage is upgraded in later steps.
 
+Production plumbing now includes:
+
+- runtime env validation with startup fail-fast
+- structured JSON request logging with request ids
+- centralized structured error payloads
+- health/readiness endpoints
+- machine-readable API contract endpoint
+
 ## Tech stack
 
 - Node.js + Express 5
@@ -36,7 +44,10 @@ Persistence is currently in-memory through repository adapters, which keeps doma
 
 - `PORT` optional, default `3012`
 - `SERVICE_NAME` optional, default `ws-api`
+- `NODE_ENV` one of `development|test|production` (default `development`)
+- `LOG_LEVEL` one of `debug|info|warn|error` (default `info`)
 - `CORS_ORIGINS` optional comma-separated allowlist
+- `CORS_ALLOW_WILDCARD_IN_PROD` optional bool, default `true`
 - `BOOTSTRAP_ADMIN_EMAIL` optional bootstrap owner account email
 - `BOOTSTRAP_ADMIN_PASSWORD` optional bootstrap owner account password
 - `BOOTSTRAP_ADMIN_NAME` optional bootstrap owner display name
@@ -58,7 +69,15 @@ Persistence is currently in-memory through repository adapters, which keeps doma
 - Route-level authorization policies are not yet enforced per domain
 - No automated CI pipeline yet (local scripts exist)
 
+## Operational endpoints
+
+- `GET /health` and `GET /api/health` for liveness
+- `GET /ready` and `GET /api/ready` for readiness
+- `GET /api/contract` for contract metadata
+
 ## Baseline documentation
 
 - `docs/baseline-audit.md`
 - `docs/repo-health.md`
+- `docs/module-architecture.md`
+- `docs/api-contract.md`

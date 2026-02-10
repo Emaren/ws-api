@@ -26,6 +26,7 @@ Updated: 2026-02-10
 1. load repositories (currently in-memory)
 2. construct services per domain
 3. mount routers and compatibility aliases
+4. apply production middleware (request context, request logging, not-found + error handling)
 
 Compatibility routes preserved:
 
@@ -33,6 +34,12 @@ Compatibility routes preserved:
 - `POST /api/register`
 - `GET /health`
 - `GET /api/health`
+
+Operational routes:
+
+- `GET /ready`
+- `GET /api/ready`
+- `GET /api/contract`
 
 ## Persistence strategy
 
