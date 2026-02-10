@@ -26,6 +26,12 @@ It currently provides basic health and placeholder auth/register endpoints, but 
 ## Scripts
 
 - `npm run dev` start API with `tsx`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+- `npm run start`
+- `npm run verify`
 
 ## Known gaps (summary)
 
@@ -37,3 +43,4 @@ It currently provides basic health and placeholder auth/register endpoints, but 
 ## Baseline documentation
 
 - `docs/baseline-audit.md`
+- `docs/repo-health.md`
