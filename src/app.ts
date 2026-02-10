@@ -4,6 +4,7 @@ import type { CorsOptions } from "cors";
 import type { AppEnv } from "./config/env.js";
 import { buildApiContract } from "./contracts/api-contract.js";
 import { createMemoryStore } from "./infrastructure/memory/memory-store.js";
+import { createRequireRoles, createRequireSession } from "./middleware/authz.js";
 import { createErrorHandler, notFoundHandler } from "./middleware/error-handler.js";
 import { requestContextMiddleware } from "./middleware/request-context.js";
 import { createRequestLogger } from "./middleware/request-logger.js";
@@ -31,6 +32,7 @@ import { RewardsService } from "./modules/rewards/rewards.service.js";
 import { createUsersRouter } from "./modules/users/users.controller.js";
 import { InMemoryUsersRepository } from "./modules/users/users.repository.js";
 import { UsersService } from "./modules/users/users.service.js";
+import { RBAC_ROLES } from "./shared/rbac.js";
 
 function buildCorsOrigin(origins: string[]): CorsOptions["origin"] {
   return origins.length > 0 ? origins : true;
@@ -81,6 +83,21 @@ export function createApp(env: AppEnv): express.Express {
   }
 
   const authController = createAuthController(authService, {
+    logLevel: env.logLevel,
+  });
+  const requireSession = createRequireSession(authService, {
+    logLevel: env.logLevel,
+  });
+  const requireOwnerAdmin = createRequireRoles(RBAC_ROLES.ownerAdmin, {
+    logLevel: env.logLevel,
+  });
+  const requireEditorial = createRequireRoles(RBAC_ROLES.editorial, {
+    logLevel: env.logLevel,
+  });
+  const requireStaff = createRequireRoles(RBAC_ROLES.staff, {
+    logLevel: env.logLevel,
+  });
+  const requireAuthenticated = createRequireRoles(RBAC_ROLES.authenticated, {
     logLevel: env.logLevel,
   });
 
@@ -169,13 +186,24 @@ export function createApp(env: AppEnv): express.Express {
   app.get("/api/auth/me", authController.meHandler);
   app.get("/api/auth/session", authController.sessionHandler);
 
-  app.use("/users", createUsersRouter(usersService));
-  app.use("/articles", createArticlesRouter(articlesService));
-  app.use("/businesses", createBusinessesRouter(businessesService));
-  app.use("/inventory", createInventoryRouter(inventoryService));
-  app.use("/notifications", createNotificationsRouter(notificationsService));
-  app.use("/billing", createBillingRouter(billingService));
-  app.use("/rewards", createRewardsRouter(rewardsService));
+  app.use("/users", requireSession, requireOwnerAdmin, createUsersRouter(usersService));
+  app.use(
+    "/articles",
+    createArticlesRouter(articlesService, {
+      requireSession,
+      requireEditorial,
+    }),
+  );
+  app.use("/businesses", requireSession, requireStaff, createBusinessesRouter(businessesService));
+  app.use("/inventory", requireSession, requireEditorial, createInventoryRouter(inventoryService));
+  app.use(
+    "/notifications",
+    requireSession,
+    requireStaff,
+    createNotificationsRouter(notificationsService),
+  );
+  app.use("/billing", requireSession, requireOwnerAdmin, createBillingRouter(billingService));
+  app.use("/rewards", requireSession, requireAuthenticated, createRewardsRouter(rewardsService));
   app.use(notFoundHandler);
   app.use(createErrorHandler(env.logLevel));
 

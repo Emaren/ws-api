@@ -3,7 +3,7 @@ import { respondWithError } from "../../shared/http.js";
 import type { UserRole } from "../../shared/models.js";
 import { AuthService } from "./auth.service.js";
 
-const REGISTER_DEFAULT_ROLE: UserRole = "STONEHOLDER";
+const REGISTER_DEFAULT_ROLE: UserRole = "USER";
 
 export interface AuthController {
   router: Router;

@@ -24,6 +24,7 @@ Production plumbing now includes:
 - centralized structured error payloads
 - health/readiness endpoints
 - machine-readable API contract endpoint
+- RBAC enforcement with role model `OWNER/ADMIN/EDITOR/CONTRIBUTOR/USER`
 
 ## Tech stack
 
@@ -67,7 +68,6 @@ Production plumbing now includes:
 
 - No persistent database integration yet (in-memory repositories)
 - Auth token is placeholder and not production-grade
-- Route-level authorization policies are not yet enforced per domain
 - No automated CI pipeline yet (local scripts exist)
 
 ## Operational endpoints

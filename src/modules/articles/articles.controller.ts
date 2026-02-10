@@ -2,7 +2,15 @@ import { Router, type RequestHandler } from "express";
 import { respondWithError } from "../../shared/http.js";
 import { ArticlesService } from "./articles.service.js";
 
-export function createArticlesRouter(articlesService: ArticlesService): Router {
+interface ArticlesRouteGuards {
+  requireSession?: RequestHandler;
+  requireEditorial?: RequestHandler;
+}
+
+export function createArticlesRouter(
+  articlesService: ArticlesService,
+  guards?: ArticlesRouteGuards,
+): Router {
   const router = Router();
 
   const listArticles: RequestHandler = (_req, res) => {
@@ -19,7 +27,7 @@ export function createArticlesRouter(articlesService: ArticlesService): Router {
     const excerpt = typeof req.body?.excerpt === "string" ? req.body.excerpt : "";
     const coverUrl = typeof req.body?.coverUrl === "string" ? req.body.coverUrl : "";
     const status = typeof req.body?.status === "string" ? req.body.status : "DRAFT";
-    const authorId = typeof req.body?.authorId === "string" ? req.body.authorId : "";
+    const authorId = res.locals.principal?.user.id ?? "";
 
     try {
       const article = articlesService.createArticle({
@@ -38,7 +46,13 @@ export function createArticlesRouter(articlesService: ArticlesService): Router {
   };
 
   router.get("/", listArticles);
-  router.post("/", createArticle);
+  if (guards?.requireSession && guards?.requireEditorial) {
+    router.post("/", guards.requireSession, guards.requireEditorial, createArticle);
+  } else if (guards?.requireEditorial) {
+    router.post("/", guards.requireEditorial, createArticle);
+  } else {
+    router.post("/", createArticle);
+  }
 
   return router;
 }

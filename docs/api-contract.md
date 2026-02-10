@@ -43,6 +43,18 @@ Legacy aliases preserved:
 - Billing: `GET /billing/customers`, `POST /billing/customers`
 - Rewards: `GET /rewards/ledger`, `POST /rewards/ledger`
 
+## RBAC role model
+
+- `OWNER`
+- `ADMIN`
+- `EDITOR`
+- `CONTRIBUTOR`
+- `USER`
+
+Legacy compatibility:
+
+- `STONEHOLDER` is normalized to `USER`.
+
 ## Error format
 
 Errors are returned as:
