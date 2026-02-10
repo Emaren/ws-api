@@ -38,7 +38,7 @@ check_endpoint() {
 echo "[smoke] ws-api base: ${BASE_URL}"
 check_endpoint "local health" "${BASE_URL}/health" "200" "\"status\":\"ok\""
 check_endpoint "local ready" "${BASE_URL}/ready" "200" "\"status\":\"ready\""
-check_endpoint "local contract" "${BASE_URL}/api/contract" "200" "\"service\""
+check_endpoint "local contract" "${BASE_URL}/api/contract" "200" "\"routes\""
 
 if [[ "${RUN_PUBLIC_SMOKE}" == "1" ]]; then
   echo "[smoke] ws-api public: ${PUBLIC_URL}"
