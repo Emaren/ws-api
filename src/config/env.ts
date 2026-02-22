@@ -146,10 +146,22 @@ function isLikelyEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function parseBindHost(rawValue: string | undefined): string {
+  const value = (rawValue ?? "127.0.0.1").trim();
+  if (!value) {
+    return "127.0.0.1";
+  }
+  if (/\s/.test(value)) {
+    throw new Error("BIND_HOST must not contain whitespace");
+  }
+  return value;
+}
+
 export interface AppEnv {
   nodeEnv: NodeEnv;
   serviceName: string;
   port: number;
+  bindHost: string;
   logLevel: LogLevel;
   corsOrigins: string[];
   allowWildcardCorsInProduction: boolean;
@@ -174,6 +186,10 @@ export interface AppEnv {
 function validateEnv(env: AppEnv): AppEnv {
   if (!env.serviceName.trim()) {
     throw new Error("SERVICE_NAME must be non-empty");
+  }
+
+  if (!env.bindHost.trim()) {
+    throw new Error("BIND_HOST must be non-empty");
   }
 
   const hasBootstrapEmail = Boolean(env.bootstrapAdminEmail);
@@ -264,6 +280,7 @@ export function loadEnv(): AppEnv {
     nodeEnv: parseNodeEnv(readTrimmedEnv("NODE_ENV")),
     serviceName: readTrimmedEnv("SERVICE_NAME") ?? "ws-api",
     port: parsePort(readTrimmedEnv("PORT")),
+    bindHost: parseBindHost(readTrimmedEnv("BIND_HOST") ?? readTrimmedEnv("HOST")),
     logLevel: parseLogLevel(readTrimmedEnv("LOG_LEVEL")),
     corsOrigins: parseOrigins(readTrimmedEnv("CORS_ORIGINS")),
     allowWildcardCorsInProduction: parseBoolean(

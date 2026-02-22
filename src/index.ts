@@ -20,9 +20,10 @@ try {
     });
   });
 
-  app.listen(env.port, () => {
+  app.listen(env.port, env.bindHost, () => {
     logEvent("info", env.logLevel, "server_started", {
       service: env.serviceName,
+      host: env.bindHost,
       port: env.port,
       nodeEnv: env.nodeEnv,
       corsOrigins: env.corsOrigins,
@@ -30,6 +31,13 @@ try {
   });
 } catch (error) {
   const message = error instanceof Error ? error.message : "Unknown startup error";
-  console.error(JSON.stringify({ ts: new Date().toISOString(), level: "error", event: "startup_failed", message }));
+  console.error(
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      level: "error",
+      event: "startup_failed",
+      message,
+    }),
+  );
   process.exit(1);
 }
