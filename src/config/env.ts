@@ -181,6 +181,8 @@ export interface AppEnv {
   notificationPushVapidSubject: string;
   notificationPushVapidPublicKey: string | undefined;
   notificationPushVapidPrivateKey: string | undefined;
+  storePath: string;
+  storeFlushIntervalMs: number;
 }
 
 function validateEnv(env: AppEnv): AppEnv {
@@ -282,6 +284,12 @@ export function loadEnv(): AppEnv {
     port: parsePort(readTrimmedEnv("PORT")),
     bindHost: parseBindHost(readTrimmedEnv("BIND_HOST") ?? readTrimmedEnv("HOST")),
     logLevel: parseLogLevel(readTrimmedEnv("LOG_LEVEL")),
+    storePath: readTrimmedEnv("STORE_PATH") ?? "./.data/ws-api-store.json",
+    storeFlushIntervalMs: parsePositiveInt(
+      readTrimmedEnv("STORE_FLUSH_INTERVAL_MS"),
+      5000,
+      "STORE_FLUSH_INTERVAL_MS",
+    ),
     corsOrigins: parseOrigins(readTrimmedEnv("CORS_ORIGINS")),
     allowWildcardCorsInProduction: parseBoolean(
       readTrimmedEnv("CORS_ALLOW_WILDCARD_IN_PROD"),

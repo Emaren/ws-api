@@ -58,7 +58,10 @@ export function createApp(env: AppEnv): express.Express {
   app.use(createRequestLogger(env.logLevel));
   app.use(express.json());
 
-  const store = createMemoryStore();
+  const store = createMemoryStore({
+    storePath: env.storePath,
+    flushIntervalMs: env.storeFlushIntervalMs,
+  });
 
   const usersRepository = new InMemoryUsersRepository(store);
   const authRepository = new AuthRepositoryAdapter(usersRepository, store);
