@@ -9,17 +9,18 @@ const VALID_ROLES: UserRole[] = ["OWNER", "ADMIN", "EDITOR", "CONTRIBUTOR", "USE
 export class UsersService {
   constructor(private readonly usersRepository: UsersRepository) {}
 
-  listUsers(): PublicUser[] {
-    return this.usersRepository.list().map(toPublicUser);
+  async listUsers(): Promise<PublicUser[]> {
+    const users = await this.usersRepository.list();
+    return users.map(toPublicUser);
   }
 
-  setRole(userId: string, role: string): PublicUser {
+  async setRole(userId: string, role: string): Promise<PublicUser> {
     const normalizedRole = normalizeRole(role);
     if (!normalizedRole || !VALID_ROLES.includes(normalizedRole)) {
       throw new HttpError(400, "Invalid role");
     }
 
-    const updated = this.usersRepository.updateRole(userId, normalizedRole);
+    const updated = await this.usersRepository.updateRole(userId, normalizedRole);
     if (!updated) {
       throw new HttpError(404, "User not found");
     }

@@ -51,7 +51,6 @@ try {
       });
       process.exit(0);
     }, 5000);
-    // @ts-expect-error unref exists on Node timers
     force.unref?.();
 
     server.close((err) => {

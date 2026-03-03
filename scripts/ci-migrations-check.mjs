@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
 function run(command, args) {
@@ -16,8 +16,41 @@ function run(command, args) {
   }
 }
 
+function hasMeaningfulPrismaMigrations() {
+  if (!existsSync("prisma/migrations")) {
+    return false;
+  }
+
+  try {
+    const entries = readdirSync("prisma/migrations", {
+      withFileTypes: true,
+    }).filter((entry) => !entry.name.startsWith("."));
+
+    if (entries.length === 0) {
+      return false;
+    }
+
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        if (existsSync(`prisma/migrations/${entry.name}/migration.sql`)) {
+          return true;
+        }
+        continue;
+      }
+
+      if (entry.isFile() && entry.name.endsWith(".sql")) {
+        return true;
+      }
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
+}
+
 const hasPrismaSchema = existsSync("prisma/schema.prisma");
-const hasPrismaMigrations = existsSync("prisma/migrations");
+const hasPrismaMigrations = hasMeaningfulPrismaMigrations();
 
 if (!hasPrismaSchema && !hasPrismaMigrations) {
   console.log("[ci:migrations] no migration framework detected; passing as no-op.");

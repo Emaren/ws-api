@@ -1,6 +1,7 @@
 import cors from "cors";
 import express, { type RequestHandler } from "express";
 import type { CorsOptions } from "cors";
+import { Pool } from "pg";
 import type { AppEnv } from "./config/env.js";
 import { buildApiContract } from "./contracts/api-contract.js";
 import { createMemoryStore } from "./infrastructure/memory/memory-store.js";
@@ -38,15 +39,32 @@ import { createRewardsRouter } from "./modules/rewards/rewards.controller.js";
 import { InMemoryRewardsRepository } from "./modules/rewards/rewards.repository.js";
 import { RewardsService } from "./modules/rewards/rewards.service.js";
 import { createUsersRouter } from "./modules/users/users.controller.js";
-import { InMemoryUsersRepository } from "./modules/users/users.repository.js";
+import {
+  InMemoryUsersRepository,
+  PostgresUsersRepository,
+  type UsersRepository,
+} from "./modules/users/users.repository.js";
 import { UsersService } from "./modules/users/users.service.js";
 import { createWalletRouter } from "./modules/wallet/wallet.controller.js";
 import { InMemoryWalletRepository } from "./modules/wallet/wallet.repository.js";
 import { WalletService } from "./modules/wallet/wallet.service.js";
+import { logEvent } from "./shared/logger.js";
 import { RBAC_ROLES } from "./shared/rbac.js";
 
 function buildCorsOrigin(origins: string[]): CorsOptions["origin"] {
   return origins.length > 0 ? origins : true;
+}
+
+async function resolveUsersCount(
+  usersRepository: UsersRepository,
+  fallbackCount: number,
+): Promise<number> {
+  try {
+    const users = await usersRepository.list();
+    return users.length;
+  } catch {
+    return fallbackCount;
+  }
 }
 
 export function createApp(env: AppEnv): express.Express {
@@ -63,7 +81,15 @@ export function createApp(env: AppEnv): express.Express {
     flushIntervalMs: env.storeFlushIntervalMs,
   });
 
-  const usersRepository = new InMemoryUsersRepository(store);
+  const postgresPool = env.databaseUrl
+    ? new Pool({
+        connectionString: env.databaseUrl,
+      })
+    : null;
+
+  const usersRepository = postgresPool
+    ? new PostgresUsersRepository(postgresPool)
+    : new InMemoryUsersRepository(store);
   const authRepository = new AuthRepositoryAdapter(usersRepository, store);
   const articlesRepository = new InMemoryArticlesRepository(store);
   const businessesRepository = new InMemoryBusinessesRepository(store);
@@ -93,18 +119,38 @@ export function createApp(env: AppEnv): express.Express {
   const walletService = new WalletService(walletRepository, env.serviceName);
   const businessOpsService = new BusinessOpsService(businessOpsRepository);
 
-  if (env.bootstrapAdminEmail && env.bootstrapAdminPassword) {
-    try {
-      authService.register({
-        email: env.bootstrapAdminEmail,
-        password: env.bootstrapAdminPassword,
-        name: env.bootstrapAdminName,
-        role: "OWNER",
-      });
-    } catch {
-      // Ignore duplicate bootstrap attempts.
-    }
-  }
+  const bootstrapConfigured = Boolean(env.bootstrapAdminEmail && env.bootstrapAdminPassword);
+  const bootstrapAdminPromise: Promise<boolean> = bootstrapConfigured
+    ? authService
+        .register({
+          email: env.bootstrapAdminEmail ?? "",
+          password: env.bootstrapAdminPassword ?? "",
+          name: env.bootstrapAdminName,
+          role: "OWNER",
+        })
+        .then(() => true)
+        .catch(async () => {
+          const bootstrapEmail = env.bootstrapAdminEmail ?? "";
+          try {
+            const existing = await usersRepository.findByEmail(bootstrapEmail);
+            if (existing) {
+              return true;
+            }
+          } catch (error) {
+            logEvent("error", env.logLevel, "bootstrap_admin_lookup_failed", {
+              service: env.serviceName,
+              email: bootstrapEmail,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+
+          logEvent("error", env.logLevel, "bootstrap_admin_failed", {
+            service: env.serviceName,
+            email: bootstrapEmail,
+          });
+          return false;
+        })
+    : Promise.resolve(true);
 
   const authController = createAuthController(authService, {
     logLevel: env.logLevel,
@@ -128,7 +174,9 @@ export function createApp(env: AppEnv): express.Express {
     logLevel: env.logLevel,
   });
 
-  const healthHandler: RequestHandler = (_req, res) => {
+  const healthHandler: RequestHandler = async (_req, res) => {
+    const usersCount = await resolveUsersCount(usersRepository, store.users.length);
+
     res.json({
       status: "ok",
       checks: {
@@ -138,7 +186,7 @@ export function createApp(env: AppEnv): express.Express {
       nodeEnv: env.nodeEnv,
       uptime_s: Math.floor((Date.now() - startedAtMs) / 1000),
       modules: {
-        users: store.users.length,
+        users: usersCount,
         authSessions: store.authSessions.length,
         articles: store.articles.length,
         businesses: store.businesses.length,
@@ -154,16 +202,17 @@ export function createApp(env: AppEnv): express.Express {
     });
   };
 
-  const readinessHandler: RequestHandler = (_req, res) => {
-    const bootstrapConfigured = Boolean(env.bootstrapAdminEmail && env.bootstrapAdminPassword);
-    const bootstrapReady =
+  const readinessHandler: RequestHandler = async (_req, res) => {
+    const usersCount = await resolveUsersCount(usersRepository, store.users.length);
+    const bootstrapReady = await bootstrapAdminPromise;
+    const bootstrapUserPresent =
       !bootstrapConfigured ||
-      Boolean(usersRepository.findByEmail(env.bootstrapAdminEmail ?? ""));
+      Boolean(await usersRepository.findByEmail(env.bootstrapAdminEmail ?? ""));
 
     const checks = {
       env: "ok",
       memoryStore: "ok",
-      bootstrapAdmin: bootstrapReady ? "ok" : "error",
+      bootstrapAdmin: bootstrapReady && bootstrapUserPresent ? "ok" : "error",
     } as const;
 
     const ready = Object.values(checks).every((value) => value === "ok");
@@ -172,7 +221,7 @@ export function createApp(env: AppEnv): express.Express {
       service: env.serviceName,
       checks,
       modules: {
-        users: store.users.length,
+        users: usersCount,
         authSessions: store.authSessions.length,
         articles: store.articles.length,
         businesses: store.businesses.length,

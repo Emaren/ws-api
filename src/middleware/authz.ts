@@ -23,10 +23,10 @@ export function createRequireSession(
   authService: AuthService,
   options?: { logLevel?: string },
 ): RequestHandler {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     try {
       const token = bearerTokenFromRequest(req);
-      const principal = authService.getSession(token);
+      const principal = await authService.getSession(token);
       res.locals.principal = principal;
       next();
     } catch (error) {
@@ -43,7 +43,7 @@ export function createResolveSession(
   authService: AuthService,
   options?: { logLevel?: string },
 ): RequestHandler {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     const token = bearerTokenFromRequest(req);
     if (!token) {
       next();
@@ -51,7 +51,7 @@ export function createResolveSession(
     }
 
     try {
-      const principal = authService.getSession(token);
+      const principal = await authService.getSession(token);
       res.locals.principal = principal;
       next();
     } catch (error) {

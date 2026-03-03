@@ -10,14 +10,14 @@ export interface CreateSessionParams {
 }
 
 export interface AuthRepository {
-  findById(userId: string): UserRecord | undefined;
-  findByEmail(email: string): UserRecord | undefined;
-  createUser(params: CreateUserParams): UserRecord;
-  createSession(params: CreateSessionParams): AuthSessionRecord;
-  findSessionByAccessToken(accessToken: string): AuthSessionRecord | undefined;
-  touchSession(sessionId: string): AuthSessionRecord | undefined;
-  revokeSessionByAccessToken(accessToken: string): AuthSessionRecord | undefined;
-  revokeAllSessionsForUser(userId: string): number;
+  findById(userId: string): Promise<UserRecord | undefined>;
+  findByEmail(email: string): Promise<UserRecord | undefined>;
+  createUser(params: CreateUserParams): Promise<UserRecord>;
+  createSession(params: CreateSessionParams): Promise<AuthSessionRecord>;
+  findSessionByAccessToken(accessToken: string): Promise<AuthSessionRecord | undefined>;
+  touchSession(sessionId: string): Promise<AuthSessionRecord | undefined>;
+  revokeSessionByAccessToken(accessToken: string): Promise<AuthSessionRecord | undefined>;
+  revokeAllSessionsForUser(userId: string): Promise<number>;
 }
 
 export class AuthRepositoryAdapter implements AuthRepository {
@@ -26,19 +26,19 @@ export class AuthRepositoryAdapter implements AuthRepository {
     private readonly store: MemoryStore,
   ) {}
 
-  findById(userId: string): UserRecord | undefined {
+  async findById(userId: string): Promise<UserRecord | undefined> {
     return this.usersRepository.findById(userId);
   }
 
-  findByEmail(email: string): UserRecord | undefined {
+  async findByEmail(email: string): Promise<UserRecord | undefined> {
     return this.usersRepository.findByEmail(email);
   }
 
-  createUser(params: CreateUserParams): UserRecord {
+  async createUser(params: CreateUserParams): Promise<UserRecord> {
     return this.usersRepository.create(params);
   }
 
-  createSession(params: CreateSessionParams): AuthSessionRecord {
+  async createSession(params: CreateSessionParams): Promise<AuthSessionRecord> {
     const timestamp = nowIso();
     const session: AuthSessionRecord = {
       id: createId("sess"),
@@ -54,11 +54,11 @@ export class AuthRepositoryAdapter implements AuthRepository {
     return session;
   }
 
-  findSessionByAccessToken(accessToken: string): AuthSessionRecord | undefined {
+  async findSessionByAccessToken(accessToken: string): Promise<AuthSessionRecord | undefined> {
     return this.store.authSessions.find((session) => session.accessToken === accessToken);
   }
 
-  touchSession(sessionId: string): AuthSessionRecord | undefined {
+  async touchSession(sessionId: string): Promise<AuthSessionRecord | undefined> {
     const session = this.store.authSessions.find((candidate) => candidate.id === sessionId);
     if (!session) {
       return undefined;
@@ -68,8 +68,8 @@ export class AuthRepositoryAdapter implements AuthRepository {
     return session;
   }
 
-  revokeSessionByAccessToken(accessToken: string): AuthSessionRecord | undefined {
-    const session = this.findSessionByAccessToken(accessToken);
+  async revokeSessionByAccessToken(accessToken: string): Promise<AuthSessionRecord | undefined> {
+    const session = await this.findSessionByAccessToken(accessToken);
     if (!session) {
       return undefined;
     }
@@ -82,7 +82,7 @@ export class AuthRepositoryAdapter implements AuthRepository {
     return session;
   }
 
-  revokeAllSessionsForUser(userId: string): number {
+  async revokeAllSessionsForUser(userId: string): Promise<number> {
     let revokedCount = 0;
 
     for (const session of this.store.authSessions) {

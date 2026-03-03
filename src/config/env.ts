@@ -163,6 +163,7 @@ export interface AppEnv {
   port: number;
   bindHost: string;
   logLevel: LogLevel;
+  databaseUrl?: string;
   corsOrigins: string[];
   allowWildcardCorsInProduction: boolean;
   authSessionTtlSeconds: number;
@@ -192,6 +193,19 @@ function validateEnv(env: AppEnv): AppEnv {
 
   if (!env.bindHost.trim()) {
     throw new Error("BIND_HOST must be non-empty");
+  }
+
+  if (env.databaseUrl) {
+    let parsed: URL;
+    try {
+      parsed = new URL(env.databaseUrl);
+    } catch {
+      throw new Error("DATABASE_URL must be a valid URL");
+    }
+
+    if (!["postgres:", "postgresql:"].includes(parsed.protocol)) {
+      throw new Error("DATABASE_URL must start with postgres:// or postgresql://");
+    }
   }
 
   const hasBootstrapEmail = Boolean(env.bootstrapAdminEmail);
@@ -278,12 +292,15 @@ function validateEnv(env: AppEnv): AppEnv {
 }
 
 export function loadEnv(): AppEnv {
+  const databaseUrl = readTrimmedEnv("DATABASE_URL");
+
   const env: AppEnv = {
     nodeEnv: parseNodeEnv(readTrimmedEnv("NODE_ENV")),
     serviceName: readTrimmedEnv("SERVICE_NAME") ?? "ws-api",
     port: parsePort(readTrimmedEnv("PORT")),
     bindHost: parseBindHost(readTrimmedEnv("BIND_HOST") ?? readTrimmedEnv("HOST")),
     logLevel: parseLogLevel(readTrimmedEnv("LOG_LEVEL")),
+    ...(databaseUrl ? { databaseUrl } : {}),
     storePath: readTrimmedEnv("STORE_PATH") ?? "./.data/ws-api-store.json",
     storeFlushIntervalMs: parsePositiveInt(
       readTrimmedEnv("STORE_FLUSH_INTERVAL_MS"),

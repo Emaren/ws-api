@@ -34,12 +34,12 @@ export function createAuthController(
 ): AuthController {
   const router = Router();
 
-  const loginHandler: RequestHandler = (req, res) => {
+  const loginHandler: RequestHandler = async (req, res) => {
     const email = typeof req.body?.email === "string" ? req.body.email : "";
     const password = typeof req.body?.password === "string" ? req.body.password : "";
 
     try {
-      const result = authService.login({ email, password });
+      const result = await authService.login({ email, password });
       res.json(result);
     } catch (error) {
       respondWithError(res, error, {
@@ -50,13 +50,13 @@ export function createAuthController(
     }
   };
 
-  const registerHandler: RequestHandler = (req, res) => {
+  const registerHandler: RequestHandler = async (req, res) => {
     const email = typeof req.body?.email === "string" ? req.body.email : "";
     const password = typeof req.body?.password === "string" ? req.body.password : "";
     const name = typeof req.body?.name === "string" ? req.body.name : "";
 
     try {
-      const user = authService.register({
+      const user = await authService.register({
         email,
         password,
         name,
@@ -73,11 +73,11 @@ export function createAuthController(
     }
   };
 
-  const logoutHandler: RequestHandler = (req, res) => {
+  const logoutHandler: RequestHandler = async (req, res) => {
     const accessToken = bearerTokenFromRequest(req);
 
     try {
-      res.json(authService.logout(accessToken));
+      res.json(await authService.logout(accessToken));
     } catch (error) {
       respondWithError(res, error, {
         logLevel: options?.logLevel,
@@ -87,11 +87,11 @@ export function createAuthController(
     }
   };
 
-  const meHandler: RequestHandler = (req, res) => {
+  const meHandler: RequestHandler = async (req, res) => {
     const accessToken = bearerTokenFromRequest(req);
 
     try {
-      res.json(authService.getMe(accessToken));
+      res.json(await authService.getMe(accessToken));
     } catch (error) {
       respondWithError(res, error, {
         logLevel: options?.logLevel,
@@ -101,11 +101,11 @@ export function createAuthController(
     }
   };
 
-  const sessionHandler: RequestHandler = (req, res) => {
+  const sessionHandler: RequestHandler = async (req, res) => {
     const accessToken = bearerTokenFromRequest(req);
 
     try {
-      res.json(authService.getSession(accessToken));
+      res.json(await authService.getSession(accessToken));
     } catch (error) {
       respondWithError(res, error, {
         logLevel: options?.logLevel,

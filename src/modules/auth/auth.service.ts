@@ -50,18 +50,18 @@ export class AuthService {
     private readonly options: AuthServiceOptions,
   ) {}
 
-  register(input: RegisterInput): PublicUser {
+  async register(input: RegisterInput): Promise<PublicUser> {
     const email = input.email.trim().toLowerCase();
     if (!email || !input.password.trim()) {
       throw new HttpError(400, "Missing email or password");
     }
 
-    const existing = this.authRepository.findByEmail(email);
+    const existing = await this.authRepository.findByEmail(email);
     if (existing) {
       throw new HttpError(409, "User already exists");
     }
 
-    const user = this.authRepository.createUser({
+    const user = await this.authRepository.createUser({
       email,
       passwordHash: hashPassword(input.password),
       name: input.name.trim() || email.split("@")[0] || "user",
@@ -71,13 +71,13 @@ export class AuthService {
     return toPublicUser(user);
   }
 
-  login(input: LoginInput): AuthLoginResult {
+  async login(input: LoginInput): Promise<AuthLoginResult> {
     const email = input.email.trim().toLowerCase();
     if (!email || !input.password.trim()) {
       throw new HttpError(400, "Missing email or password");
     }
 
-    const user = this.authRepository.findByEmail(email);
+    const user = await this.authRepository.findByEmail(email);
     if (!user || !verifyPassword(input.password, user.passwordHash)) {
       throw new HttpError(401, "Invalid credentials");
     }
@@ -85,7 +85,7 @@ export class AuthService {
     const accessToken = randomBytes(32).toString("base64url");
     const expiresAt = new Date(Date.now() + this.options.sessionTtlSeconds * 1000).toISOString();
 
-    const session = this.authRepository.createSession({
+    const session = await this.authRepository.createSession({
       userId: user.id,
       accessToken,
       expiresAt,
@@ -98,13 +98,13 @@ export class AuthService {
     };
   }
 
-  logout(accessToken: string): { message: string } {
+  async logout(accessToken: string): Promise<{ message: string }> {
     const token = accessToken.trim();
     if (!token) {
       throw new HttpError(401, "Missing bearer token");
     }
 
-    const session = this.authRepository.revokeSessionByAccessToken(token);
+    const session = await this.authRepository.revokeSessionByAccessToken(token);
     if (!session) {
       throw new HttpError(401, "Invalid session token");
     }
@@ -112,22 +112,22 @@ export class AuthService {
     return { message: "Logged out" };
   }
 
-  getMe(accessToken: string): { user: PublicUser } {
-    const principal = this.resolvePrincipal(accessToken);
+  async getMe(accessToken: string): Promise<{ user: PublicUser }> {
+    const principal = await this.resolvePrincipal(accessToken);
     return { user: principal.user };
   }
 
-  getSession(accessToken: string): AuthSessionResult {
+  async getSession(accessToken: string): Promise<AuthSessionResult> {
     return this.resolvePrincipal(accessToken);
   }
 
-  private resolvePrincipal(accessToken: string): SessionPrincipal {
+  private async resolvePrincipal(accessToken: string): Promise<SessionPrincipal> {
     const token = accessToken.trim();
     if (!token) {
       throw new HttpError(401, "Missing bearer token");
     }
 
-    const session = this.authRepository.findSessionByAccessToken(token);
+    const session = await this.authRepository.findSessionByAccessToken(token);
     if (!session) {
       throw new HttpError(401, "Invalid session token");
     }
@@ -137,16 +137,16 @@ export class AuthService {
     }
 
     if (isExpired(session.expiresAt)) {
-      this.authRepository.revokeSessionByAccessToken(token);
+      await this.authRepository.revokeSessionByAccessToken(token);
       throw new HttpError(401, "Session expired");
     }
 
-    const user = this.authRepository.findById(session.userId);
+    const user = await this.authRepository.findById(session.userId);
     if (!user) {
       throw new HttpError(401, "Session user not found");
     }
 
-    const touched = this.authRepository.touchSession(session.id);
+    const touched = await this.authRepository.touchSession(session.id);
 
     return {
       user: toPublicUser(user),
