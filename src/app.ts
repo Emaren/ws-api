@@ -90,6 +90,7 @@ export function createApp(env: AppEnv): express.Express {
   const usersRepository = postgresPool
     ? new PostgresUsersRepository(postgresPool)
     : new InMemoryUsersRepository(store);
+  const usersStorageBackend = postgresPool ? "postgres" : "memory";
   const authRepository = new AuthRepositoryAdapter(usersRepository, store);
   const articlesRepository = new InMemoryArticlesRepository(store);
   const businessesRepository = new InMemoryBusinessesRepository(store);
@@ -202,6 +203,12 @@ export function createApp(env: AppEnv): express.Express {
         walletChallenges: store.walletChallenges.length,
         businessOps: businessOpsService.counts(),
       },
+      storage: {
+        users: usersStorageBackend,
+        authSessions: "memory",
+        articles: "memory",
+        businesses: "memory",
+      },
     });
   };
 
@@ -236,6 +243,12 @@ export function createApp(env: AppEnv): express.Express {
         walletLinks: store.walletLinks.length,
         walletChallenges: store.walletChallenges.length,
         businessOps: businessOpsService.counts(),
+      },
+      storage: {
+        users: usersStorageBackend,
+        authSessions: "memory",
+        articles: "memory",
+        businesses: "memory",
       },
     };
 
