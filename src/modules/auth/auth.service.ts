@@ -21,6 +21,12 @@ interface LoginInput {
   password: string;
 }
 
+interface BridgePasswordResetInput {
+  email: string;
+  password: string;
+  bridgeKey: string;
+}
+
 interface SessionPrincipal {
   user: PublicUser;
   session: PublicAuthSession;
@@ -34,6 +40,7 @@ export interface AuthSessionResult extends SessionPrincipal {}
 
 interface AuthServiceOptions {
   sessionTtlSeconds: number;
+  bridgeSharedSecret?: string;
 }
 
 function toDate(value: string): Date {
@@ -119,6 +126,49 @@ export class AuthService {
 
   async getSession(accessToken: string): Promise<AuthSessionResult> {
     return this.resolvePrincipal(accessToken);
+  }
+
+  async resetPasswordViaBridge(
+    input: BridgePasswordResetInput,
+  ): Promise<{ message: string; user: PublicUser }> {
+    const configuredSecret = this.options.bridgeSharedSecret?.trim();
+    if (!configuredSecret) {
+      throw new HttpError(503, "Password bridge is not configured");
+    }
+
+    if (input.bridgeKey.trim() !== configuredSecret) {
+      throw new HttpError(401, "Invalid bridge credentials");
+    }
+
+    const email = input.email.trim().toLowerCase();
+    if (!email || !input.password.trim()) {
+      throw new HttpError(400, "Missing email or password");
+    }
+
+    if (input.password.length < 8) {
+      throw new HttpError(400, "Password must be at least 8 characters");
+    }
+
+    const user = await this.authRepository.findByEmail(email);
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+
+    const passwordHash = hashPassword(input.password);
+    const updatedUser = await this.authRepository.updateUserPassword(
+      user.id,
+      passwordHash,
+    );
+    if (!updatedUser) {
+      throw new HttpError(500, "Failed to update password");
+    }
+
+    await this.authRepository.revokeAllSessionsForUser(updatedUser.id);
+
+    return {
+      message: "Password updated",
+      user: toPublicUser(updatedUser),
+    };
   }
 
   private async resolvePrincipal(accessToken: string): Promise<SessionPrincipal> {

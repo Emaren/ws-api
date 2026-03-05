@@ -9,6 +9,7 @@ export interface AuthController {
   router: Router;
   loginHandler: RequestHandler;
   registerHandler: RequestHandler;
+  resetPasswordBridgeHandler: RequestHandler;
   logoutHandler: RequestHandler;
   meHandler: RequestHandler;
   sessionHandler: RequestHandler;
@@ -73,6 +74,28 @@ export function createAuthController(
     }
   };
 
+  const resetPasswordBridgeHandler: RequestHandler = async (req, res) => {
+    const email = typeof req.body?.email === "string" ? req.body.email : "";
+    const password = typeof req.body?.password === "string" ? req.body.password : "";
+    const bridgeKeyHeader = req.header("x-ws-bridge-key");
+    const bridgeKey = typeof bridgeKeyHeader === "string" ? bridgeKeyHeader : "";
+
+    try {
+      const result = await authService.resetPasswordViaBridge({
+        email,
+        password,
+        bridgeKey,
+      });
+      res.json(result);
+    } catch (error) {
+      respondWithError(res, error, {
+        logLevel: options?.logLevel,
+        method: req.method,
+        path: req.originalUrl,
+      });
+    }
+  };
+
   const logoutHandler: RequestHandler = async (req, res) => {
     const accessToken = bearerTokenFromRequest(req);
 
@@ -117,6 +140,7 @@ export function createAuthController(
 
   router.post("/login", loginHandler);
   router.post("/register", registerHandler);
+  router.post("/password/reset", resetPasswordBridgeHandler);
   router.post("/logout", logoutHandler);
   router.get("/me", meHandler);
   router.get("/session", sessionHandler);
@@ -125,6 +149,7 @@ export function createAuthController(
     router,
     loginHandler,
     registerHandler,
+    resetPasswordBridgeHandler,
     logoutHandler,
     meHandler,
     sessionHandler,

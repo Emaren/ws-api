@@ -102,6 +102,9 @@ export function createApp(env: AppEnv): express.Express {
 
   const authService = new AuthService(authRepository, {
     sessionTtlSeconds: env.authSessionTtlSeconds,
+    ...(env.authBridgeSharedSecret
+      ? { bridgeSharedSecret: env.authBridgeSharedSecret }
+      : {}),
   });
   const usersService = new UsersService(usersRepository);
   const articlesService = new ArticlesService(articlesRepository);
@@ -269,6 +272,7 @@ export function createApp(env: AppEnv): express.Express {
   app.post("/api/auth/logout", authController.logoutHandler);
   app.get("/api/auth/me", authController.meHandler);
   app.get("/api/auth/session", authController.sessionHandler);
+  app.post("/api/auth/password/reset", authController.resetPasswordBridgeHandler);
   app.use("/auth/wallet", requireSession, createWalletRouter(walletService));
 
   app.use("/users", requireSession, requireOwnerAdmin, createUsersRouter(usersService));

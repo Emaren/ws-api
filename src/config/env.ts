@@ -167,6 +167,7 @@ export interface AppEnv {
   corsOrigins: string[];
   allowWildcardCorsInProduction: boolean;
   authSessionTtlSeconds: number;
+  authBridgeSharedSecret?: string;
   bootstrapAdminEmail: string | undefined;
   bootstrapAdminPassword: string | undefined;
   bootstrapAdminName: string;
@@ -293,6 +294,7 @@ function validateEnv(env: AppEnv): AppEnv {
 
 export function loadEnv(): AppEnv {
   const databaseUrl = readTrimmedEnv("DATABASE_URL");
+  const authBridgeSharedSecret = readTrimmedEnv("AUTH_BRIDGE_SHARED_SECRET");
 
   const env: AppEnv = {
     nodeEnv: parseNodeEnv(readTrimmedEnv("NODE_ENV")),
@@ -317,6 +319,7 @@ export function loadEnv(): AppEnv {
       60 * 60 * 24 * 7,
       "AUTH_SESSION_TTL_SECONDS",
     ),
+    ...(authBridgeSharedSecret ? { authBridgeSharedSecret } : {}),
     bootstrapAdminEmail: readTrimmedEnv("BOOTSTRAP_ADMIN_EMAIL"),
     bootstrapAdminPassword: readTrimmedEnv("BOOTSTRAP_ADMIN_PASSWORD"),
     bootstrapAdminName: readTrimmedEnv("BOOTSTRAP_ADMIN_NAME") ?? "Owner",

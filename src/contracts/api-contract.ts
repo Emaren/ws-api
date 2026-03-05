@@ -14,7 +14,7 @@ export interface ApiContractDocument {
 export function buildApiContract(serviceName: string): ApiContractDocument {
   return {
     name: serviceName,
-    version: "3.6.0-web-push-fallback",
+    version: "3.7.0-auth-bridge-reset",
     generatedAt: new Date().toISOString(),
     routes: [
       { method: "GET", path: "/", summary: "Service identity" },
@@ -27,6 +27,11 @@ export function buildApiContract(serviceName: string): ApiContractDocument {
       { method: "POST", path: "/auth/register", summary: "Register a user" },
       { method: "POST", path: "/auth/login", summary: "Login user" },
       { method: "POST", path: "/auth/logout", summary: "Logout session" },
+      {
+        method: "POST",
+        path: "/auth/password/reset",
+        summary: "Internal bridge password reset (requires x-ws-bridge-key)",
+      },
       { method: "GET", path: "/auth/me", summary: "Get current user from bearer session" },
       { method: "GET", path: "/auth/session", summary: "Get current session details" },
       { method: "POST", path: "/api/register", summary: "Legacy register alias" },
@@ -37,6 +42,11 @@ export function buildApiContract(serviceName: string): ApiContractDocument {
       { method: "POST", path: "/api/auth/logout", summary: "Alias for logout" },
       { method: "GET", path: "/api/auth/me", summary: "Alias for me" },
       { method: "GET", path: "/api/auth/session", summary: "Alias for session" },
+      {
+        method: "POST",
+        path: "/api/auth/password/reset",
+        summary: "Alias for internal bridge password reset",
+      },
       { method: "GET", path: "/auth/wallet", summary: "Get linked wallet for current session user" },
       { method: "POST", path: "/auth/wallet/challenge", summary: "Create wallet signature challenge" },
       { method: "POST", path: "/auth/wallet/link", summary: "Verify signature and link wallet" },

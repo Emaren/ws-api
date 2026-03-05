@@ -17,6 +17,7 @@ export interface UsersRepository {
   findByEmail(email: string): Promise<UserRecord | undefined>;
   create(params: CreateUserParams): Promise<UserRecord>;
   updateRole(id: string, role: UserRole): Promise<UserRecord | undefined>;
+  updatePassword(id: string, passwordHash: string): Promise<UserRecord | undefined>;
 }
 
 export class InMemoryUsersRepository implements UsersRepository {
@@ -57,6 +58,17 @@ export class InMemoryUsersRepository implements UsersRepository {
     }
 
     user.role = role;
+    user.updatedAt = nowIso();
+    return user;
+  }
+
+  async updatePassword(id: string, passwordHash: string): Promise<UserRecord | undefined> {
+    const user = await this.findById(id);
+    if (!user) {
+      return undefined;
+    }
+
+    user.passwordHash = passwordHash;
     user.updatedAt = nowIso();
     return user;
   }
@@ -153,6 +165,18 @@ export class PostgresUsersRepository implements UsersRepository {
        WHERE id = $1
        RETURNING id, email, password, name, role, "createdAt", "updatedAt"`,
       [id, role],
+    );
+    const row = result.rows[0];
+    return row ? mapPostgresUser(row) : undefined;
+  }
+
+  async updatePassword(id: string, passwordHash: string): Promise<UserRecord | undefined> {
+    const result = await this.pool.query<PostgresUserRow>(
+      `UPDATE "User"
+       SET password = $2, "updatedAt" = NOW()
+       WHERE id = $1
+       RETURNING id, email, password, name, role, "createdAt", "updatedAt"`,
+      [id, passwordHash],
     );
     const row = result.rows[0];
     return row ? mapPostgresUser(row) : undefined;

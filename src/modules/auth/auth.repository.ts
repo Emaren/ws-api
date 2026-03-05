@@ -13,6 +13,7 @@ export interface AuthRepository {
   findById(userId: string): Promise<UserRecord | undefined>;
   findByEmail(email: string): Promise<UserRecord | undefined>;
   createUser(params: CreateUserParams): Promise<UserRecord>;
+  updateUserPassword(userId: string, passwordHash: string): Promise<UserRecord | undefined>;
   createSession(params: CreateSessionParams): Promise<AuthSessionRecord>;
   findSessionByAccessToken(accessToken: string): Promise<AuthSessionRecord | undefined>;
   touchSession(sessionId: string): Promise<AuthSessionRecord | undefined>;
@@ -36,6 +37,13 @@ export class AuthRepositoryAdapter implements AuthRepository {
 
   async createUser(params: CreateUserParams): Promise<UserRecord> {
     return this.usersRepository.create(params);
+  }
+
+  async updateUserPassword(
+    userId: string,
+    passwordHash: string,
+  ): Promise<UserRecord | undefined> {
+    return this.usersRepository.updatePassword(userId, passwordHash);
   }
 
   async createSession(params: CreateSessionParams): Promise<AuthSessionRecord> {
