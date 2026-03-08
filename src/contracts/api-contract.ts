@@ -51,6 +51,7 @@ export function buildApiContract(serviceName: string): ApiContractDocument {
       { method: "POST", path: "/auth/wallet/challenge", summary: "Create wallet signature challenge" },
       { method: "POST", path: "/auth/wallet/link", summary: "Verify signature and link wallet" },
       { method: "DELETE", path: "/auth/wallet", summary: "Unlink wallet from current user" },
+      { method: "GET", path: "/ops/wallet-links", summary: "List linked wallets for owner/admin ops" },
       { method: "GET", path: "/users", summary: "List users" },
       { method: "PATCH", path: "/users/:id/role", summary: "Update user role" },
       { method: "GET", path: "/articles", summary: "List articles" },

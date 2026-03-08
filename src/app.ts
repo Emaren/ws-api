@@ -45,6 +45,7 @@ import {
   type UsersRepository,
 } from "./modules/users/users.repository.js";
 import { UsersService } from "./modules/users/users.service.js";
+import { createWalletAdminRouter } from "./modules/wallet/wallet-admin.controller.js";
 import { createWalletRouter } from "./modules/wallet/wallet.controller.js";
 import { InMemoryWalletRepository } from "./modules/wallet/wallet.repository.js";
 import { WalletService } from "./modules/wallet/wallet.service.js";
@@ -287,6 +288,12 @@ export function createApp(env: AppEnv): express.Express {
   app.get("/api/auth/session", authController.sessionHandler);
   app.post("/api/auth/password/reset", authController.resetPasswordBridgeHandler);
   app.use("/auth/wallet", requireSession, createWalletRouter(walletService));
+  app.use(
+    "/ops/wallet-links",
+    requireSession,
+    requireOwnerAdmin,
+    createWalletAdminRouter(walletService),
+  );
 
   app.use("/users", requireSession, requireOwnerAdmin, createUsersRouter(usersService));
   app.use(

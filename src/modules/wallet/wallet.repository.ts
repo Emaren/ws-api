@@ -28,6 +28,7 @@ export interface UpsertWalletLinkParams {
 export interface WalletRepository {
   findWalletByUserId(userId: string): WalletLinkRecord | undefined;
   findWalletByAddress(walletAddress: string): WalletLinkRecord | undefined;
+  listWalletLinks(): WalletLinkRecord[];
   upsertWalletLink(params: UpsertWalletLinkParams): WalletLinkRecord;
   removeWalletByUserId(userId: string): WalletLinkRecord | undefined;
 
@@ -49,6 +50,10 @@ export class InMemoryWalletRepository implements WalletRepository {
     return this.store.walletLinks.find(
       (candidate) => candidate.walletAddress.toLowerCase() === normalized,
     );
+  }
+
+  listWalletLinks(): WalletLinkRecord[] {
+    return [...this.store.walletLinks];
   }
 
   upsertWalletLink(params: UpsertWalletLinkParams): WalletLinkRecord {

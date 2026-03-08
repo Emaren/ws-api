@@ -225,6 +225,10 @@ export class WalletService {
     private readonly serviceName: string,
   ) {}
 
+  listWalletLinks(): PublicWalletLink[] {
+    return this.walletRepository.listWalletLinks().map(toPublicWalletLink);
+  }
+
   getLinkedWallet(userId: string): PublicWalletLink | null {
     const wallet = this.walletRepository.findWalletByUserId(userId);
     return wallet ? toPublicWalletLink(wallet) : null;
