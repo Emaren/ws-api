@@ -1,13 +1,10 @@
+import type { MemoryStore } from "../../infrastructure/memory/memory-store.js";
 import type {
   BusinessOpsEntityMap,
   BusinessOpsEntityName,
 } from "./business-ops.types.js";
 
 type Predicate<T> = (record: T) => boolean;
-
-interface EntityTable<T extends { id: string }> {
-  byId: Map<string, T>;
-}
 
 const ENTITY_NAMES: BusinessOpsEntityName[] = [
   "businesses",
@@ -21,23 +18,6 @@ const ENTITY_NAMES: BusinessOpsEntityName[] = [
   "affiliateClicks",
   "rewardLedger",
 ];
-
-function createEntityTables(): {
-  [K in BusinessOpsEntityName]: EntityTable<BusinessOpsEntityMap[K]>;
-} {
-  return {
-    businesses: { byId: new Map() },
-    storeProfiles: { byId: new Map() },
-    inventoryItems: { byId: new Map() },
-    pricingRules: { byId: new Map() },
-    offers: { byId: new Map() },
-    campaigns: { byId: new Map() },
-    notificationRecipients: { byId: new Map() },
-    deliveryLeads: { byId: new Map() },
-    affiliateClicks: { byId: new Map() },
-    rewardLedger: { byId: new Map() },
-  };
-}
 
 export interface BusinessOpsRepository {
   list<K extends BusinessOpsEntityName>(entity: K): BusinessOpsEntityMap[K][];
@@ -57,20 +37,23 @@ export interface BusinessOpsRepository {
   counts(): Record<BusinessOpsEntityName, number>;
 }
 
-export class InMemoryBusinessOpsRepository implements BusinessOpsRepository {
-  private readonly tables = createEntityTables();
+export class StoreBackedBusinessOpsRepository implements BusinessOpsRepository {
+  constructor(private readonly store: MemoryStore) {}
+
+  private records<K extends BusinessOpsEntityName>(entity: K): BusinessOpsEntityMap[K][] {
+    return this.store.businessOps[entity] as BusinessOpsEntityMap[K][];
+  }
 
   list<K extends BusinessOpsEntityName>(entity: K): BusinessOpsEntityMap[K][] {
-    const table = this.tables[entity];
-    return [...table.byId.values()];
+    return [...this.records(entity)];
   }
 
   getById<K extends BusinessOpsEntityName>(entity: K, id: string): BusinessOpsEntityMap[K] | undefined {
-    return this.tables[entity].byId.get(id);
+    return this.records(entity).find((record) => record.id === id);
   }
 
   create<K extends BusinessOpsEntityName>(entity: K, record: BusinessOpsEntityMap[K]): BusinessOpsEntityMap[K] {
-    this.tables[entity].byId.set(record.id, record);
+    this.records(entity).push(record);
     return record;
   }
 
@@ -79,47 +62,48 @@ export class InMemoryBusinessOpsRepository implements BusinessOpsRepository {
     id: string,
     updater: (existing: BusinessOpsEntityMap[K]) => BusinessOpsEntityMap[K],
   ): BusinessOpsEntityMap[K] | undefined {
-    const current = this.tables[entity].byId.get(id);
+    const records = this.records(entity);
+    const index = records.findIndex((record) => record.id === id);
+    if (index === -1) {
+      return undefined;
+    }
+
+    const current = records[index];
     if (!current) {
       return undefined;
     }
 
     const next = updater(current);
-    this.tables[entity].byId.set(id, next);
+    records[index] = next;
     return next;
   }
 
   delete<K extends BusinessOpsEntityName>(entity: K, id: string): BusinessOpsEntityMap[K] | undefined {
-    const current = this.tables[entity].byId.get(id);
-    if (!current) {
+    const records = this.records(entity);
+    const index = records.findIndex((record) => record.id === id);
+    if (index === -1) {
       return undefined;
     }
 
-    this.tables[entity].byId.delete(id);
-    return current;
+    const [deleted] = records.splice(index, 1);
+    return deleted;
   }
 
   findFirst<K extends BusinessOpsEntityName>(
     entity: K,
     predicate: Predicate<BusinessOpsEntityMap[K]>,
   ): BusinessOpsEntityMap[K] | undefined {
-    for (const record of this.tables[entity].byId.values()) {
-      if (predicate(record)) {
-        return record;
-      }
-    }
-
-    return undefined;
+    return this.records(entity).find(predicate);
   }
 
   count<K extends BusinessOpsEntityName>(entity: K): number {
-    return this.tables[entity].byId.size;
+    return this.records(entity).length;
   }
 
   counts(): Record<BusinessOpsEntityName, number> {
     const output = {} as Record<BusinessOpsEntityName, number>;
     for (const entity of ENTITY_NAMES) {
-      output[entity] = this.tables[entity].byId.size;
+      output[entity] = this.records(entity).length;
     }
 
     return output;

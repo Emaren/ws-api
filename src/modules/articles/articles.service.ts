@@ -28,7 +28,7 @@ const ARTICLE_STATUS_TRANSITIONS: Record<ArticleStatus, readonly ArticleStatus[]
   DRAFT: ["REVIEW", "ARCHIVED"],
   REVIEW: ["DRAFT", "PUBLISHED", "ARCHIVED"],
   PUBLISHED: ["ARCHIVED"],
-  ARCHIVED: ["DRAFT"],
+  ARCHIVED: ["DRAFT", "REVIEW", "PUBLISHED"],
 };
 
 function slugify(value: string): string {

@@ -11,10 +11,20 @@ export interface ApiContractDocument {
   routes: ApiContractRoute[];
 }
 
+function buildCrudRoutes(basePath: string, summaryLabel: string): ApiContractRoute[] {
+  return [
+    { method: "GET", path: basePath, summary: `List ${summaryLabel}` },
+    { method: "GET", path: `${basePath}/:id`, summary: `Get ${summaryLabel} record by id` },
+    { method: "POST", path: basePath, summary: `Create ${summaryLabel} record` },
+    { method: "PATCH", path: `${basePath}/:id`, summary: `Update ${summaryLabel} record` },
+    { method: "DELETE", path: `${basePath}/:id`, summary: `Delete ${summaryLabel} record` },
+  ];
+}
+
 export function buildApiContract(serviceName: string): ApiContractDocument {
   return {
     name: serviceName,
-    version: "3.7.0-auth-bridge-reset",
+    version: "3.9.0-shared-contract-client",
     generatedAt: new Date().toISOString(),
     routes: [
       { method: "GET", path: "/", summary: "Service identity" },
@@ -79,6 +89,17 @@ export function buildApiContract(serviceName: string): ApiContractDocument {
       { method: "GET", path: "/rewards/export", summary: "Owner/Admin reward export preview (JSON/CSV)" },
       { method: "POST", path: "/rewards/export/mark", summary: "Owner/Admin mark pending rewards as exported batch" },
       { method: "POST", path: "/rewards/export/settle", summary: "Owner/Admin settle exported rewards with payout tx hash" },
+      ...buildCrudRoutes("/ops/businesses", "business ops businesses"),
+      ...buildCrudRoutes("/ops/store-profiles", "store profiles"),
+      ...buildCrudRoutes("/ops/inventory-items", "business ops inventory items"),
+      ...buildCrudRoutes("/ops/pricing-rules", "business ops pricing rules"),
+      ...buildCrudRoutes("/ops/offers", "business ops offers"),
+      ...buildCrudRoutes("/ops/campaigns", "business ops campaigns"),
+      ...buildCrudRoutes("/ops/notification-recipients", "notification recipients"),
+      ...buildCrudRoutes("/ops/delivery-leads", "delivery leads"),
+      ...buildCrudRoutes("/ops/affiliate-clicks", "affiliate clicks"),
+      ...buildCrudRoutes("/ops/reward-ledger", "business ops reward ledger"),
+      { method: "GET", path: "/ops/counts", summary: "Count business ops records by resource" },
       { method: "POST", path: "/ops/pricing/quote", summary: "Compute deterministic dynamic price quote" },
     ],
   };

@@ -138,9 +138,10 @@ export class PostgresUsersRepository implements UsersRepository {
   }
 
   async create(params: CreateUserParams): Promise<UserRecord> {
+    const timestamp = new Date();
     const result = await this.pool.query<PostgresUserRow>(
-      `INSERT INTO "User" (id, email, password, name, role)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO "User" (id, email, password, name, role, "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $6)
        RETURNING id, email, password, name, role, "createdAt", "updatedAt"`,
       [
         createId("usr"),
@@ -148,6 +149,7 @@ export class PostgresUsersRepository implements UsersRepository {
         params.passwordHash,
         params.name,
         params.role,
+        timestamp,
       ],
     );
 

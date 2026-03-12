@@ -267,3 +267,7 @@ export type BusinessOpsEntityMap = {
 };
 
 export type BusinessOpsEntityName = keyof BusinessOpsEntityMap;
+
+export type BusinessOpsEntityStore = {
+  [K in BusinessOpsEntityName]: BusinessOpsEntityMap[K][];
+};

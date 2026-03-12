@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import type {
+  BusinessOpsEntityStore,
+} from "../../modules/business-ops/business-ops.types.js";
+import type {
   ArticleRecord,
   AuthSessionRecord,
   BillingCustomerRecord,
@@ -26,6 +29,7 @@ export interface MemoryStore {
   rewardLedger: RewardLedgerEntryRecord[];
   walletLinks: WalletLinkRecord[];
   walletChallenges: WalletLinkChallengeRecord[];
+  businessOps: BusinessOpsEntityStore;
 }
 
 function emptyStore(): MemoryStore {
@@ -41,6 +45,18 @@ function emptyStore(): MemoryStore {
     rewardLedger: [],
     walletLinks: [],
     walletChallenges: [],
+    businessOps: {
+      businesses: [],
+      storeProfiles: [],
+      inventoryItems: [],
+      pricingRules: [],
+      offers: [],
+      campaigns: [],
+      notificationRecipients: [],
+      deliveryLeads: [],
+      affiliateClicks: [],
+      rewardLedger: [],
+    },
   };
 }
 
@@ -61,6 +77,12 @@ function coerceStore(value: unknown): MemoryStore {
 
   const obj = value as Record<string, unknown>;
   const arr = (k: keyof MemoryStore) => (Array.isArray(obj[k]) ? (obj[k] as any[]) : []);
+  const businessOpsObject =
+    obj.businessOps && typeof obj.businessOps === "object" && !Array.isArray(obj.businessOps)
+      ? (obj.businessOps as Record<string, unknown>)
+      : {};
+  const businessOpsArr = (key: keyof BusinessOpsEntityStore) =>
+    Array.isArray(businessOpsObject[key]) ? (businessOpsObject[key] as any[]) : [];
 
   return {
     users: arr("users") as UserRecord[],
@@ -74,6 +96,18 @@ function coerceStore(value: unknown): MemoryStore {
     rewardLedger: arr("rewardLedger") as RewardLedgerEntryRecord[],
     walletLinks: arr("walletLinks") as WalletLinkRecord[],
     walletChallenges: arr("walletChallenges") as WalletLinkChallengeRecord[],
+    businessOps: {
+      businesses: businessOpsArr("businesses"),
+      storeProfiles: businessOpsArr("storeProfiles"),
+      inventoryItems: businessOpsArr("inventoryItems"),
+      pricingRules: businessOpsArr("pricingRules"),
+      offers: businessOpsArr("offers"),
+      campaigns: businessOpsArr("campaigns"),
+      notificationRecipients: businessOpsArr("notificationRecipients"),
+      deliveryLeads: businessOpsArr("deliveryLeads"),
+      affiliateClicks: businessOpsArr("affiliateClicks"),
+      rewardLedger: businessOpsArr("rewardLedger"),
+    } as BusinessOpsEntityStore,
   };
 }
 

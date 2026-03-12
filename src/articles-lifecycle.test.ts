@@ -217,6 +217,22 @@ test("article lifecycle enforces draft/review/publish/archive transitions", asyn
 
     const publicArchived = await requestJson(server.baseUrl, `/articles/${encodeURIComponent(slug)}`);
     assert.equal(publicArchived.status, 404);
+
+    const republish = await requestJson(server.baseUrl, `/articles/${encodeURIComponent(slug)}`, {
+      method: "PATCH",
+      token: ownerToken,
+      body: { status: "PUBLISHED" },
+    });
+    assert.equal(republish.status, 200);
+    assert.equal(republish.body?.status, "PUBLISHED");
+    assert.equal(typeof republish.body?.publishedAt, "string");
+
+    const publicRepublished = await requestJson(
+      server.baseUrl,
+      `/articles/${encodeURIComponent(slug)}`,
+    );
+    assert.equal(publicRepublished.status, 200);
+    assert.equal(publicRepublished.body?.status, "PUBLISHED");
   } finally {
     await server.close();
   }

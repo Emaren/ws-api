@@ -23,7 +23,7 @@ import { createBillingRouter } from "./modules/billing/billing.controller.js";
 import { InMemoryBillingRepository } from "./modules/billing/billing.repository.js";
 import { BillingService } from "./modules/billing/billing.service.js";
 import { createBusinessOpsRouter } from "./modules/business-ops/business-ops.controller.js";
-import { InMemoryBusinessOpsRepository } from "./modules/business-ops/business-ops.repository.js";
+import { StoreBackedBusinessOpsRepository } from "./modules/business-ops/business-ops.repository.js";
 import { BusinessOpsService } from "./modules/business-ops/business-ops.service.js";
 import { createBusinessesRouter } from "./modules/businesses/businesses.controller.js";
 import { InMemoryBusinessesRepository } from "./modules/businesses/businesses.repository.js";
@@ -50,7 +50,10 @@ import { createWalletRouter } from "./modules/wallet/wallet.controller.js";
 import { InMemoryWalletRepository } from "./modules/wallet/wallet.repository.js";
 import { WalletService } from "./modules/wallet/wallet.service.js";
 import { logEvent } from "./shared/logger.js";
+import { resolveServiceReleaseInfo } from "./shared/release.js";
 import { RBAC_ROLES } from "./shared/rbac.js";
+
+type StorageBackend = "postgres" | "file-journal" | "memory";
 
 function buildCorsOrigin(origins: string[]): CorsOptions["origin"] {
   return origins.length > 0 ? origins : true;
@@ -71,6 +74,8 @@ async function resolveUsersCount(
 export function createApp(env: AppEnv): express.Express {
   const app = express();
   const startedAtMs = Date.now();
+  const release = resolveServiceReleaseInfo(startedAtMs);
+  const apiContract = buildApiContract(env.serviceName);
 
   app.use(cors({ origin: buildCorsOrigin(env.corsOrigins) }));
   app.use(requestContextMiddleware);
@@ -91,7 +96,24 @@ export function createApp(env: AppEnv): express.Express {
   const usersRepository = postgresPool
     ? new PostgresUsersRepository(postgresPool)
     : new InMemoryUsersRepository(store);
-  const usersStorageBackend = postgresPool ? "postgres" : "memory";
+  const journalConfigured = env.storePath.trim().length > 0;
+  const storeStorageBackend: StorageBackend = journalConfigured ? "file-journal" : "memory";
+  const storage = {
+    users: (postgresPool ? "postgres" : storeStorageBackend) as StorageBackend,
+    authSessions: storeStorageBackend,
+    articles: storeStorageBackend,
+    businesses: storeStorageBackend,
+    inventoryItems: storeStorageBackend,
+    notifications: storeStorageBackend,
+    notificationAuditLogs: storeStorageBackend,
+    billingCustomers: storeStorageBackend,
+    rewardEntries: storeStorageBackend,
+    walletLinks: storeStorageBackend,
+    walletChallenges: storeStorageBackend,
+    businessOps: storeStorageBackend,
+  };
+  const durableModules = Object.values(storage).filter((backend) => backend !== "memory").length;
+  const totalModules = Object.keys(storage).length;
   const authRepository = new AuthRepositoryAdapter(usersRepository, store);
   const articlesRepository = new InMemoryArticlesRepository(store);
   const businessesRepository = new InMemoryBusinessesRepository(store);
@@ -100,7 +122,7 @@ export function createApp(env: AppEnv): express.Express {
   const billingRepository = new InMemoryBillingRepository(store);
   const rewardsRepository = new InMemoryRewardsRepository(store);
   const walletRepository = new InMemoryWalletRepository(store);
-  const businessOpsRepository = new InMemoryBusinessOpsRepository();
+  const businessOpsRepository = new StoreBackedBusinessOpsRepository(store);
 
   const authService = new AuthService(authRepository, {
     sessionTtlSeconds: env.authSessionTtlSeconds,
@@ -190,6 +212,7 @@ export function createApp(env: AppEnv): express.Express {
       service: env.serviceName,
       nodeEnv: env.nodeEnv,
       uptime_s: Math.floor((Date.now() - startedAtMs) / 1000),
+      release,
       modules: {
         users: usersCount,
         authSessions: store.authSessions.length,
@@ -205,10 +228,19 @@ export function createApp(env: AppEnv): express.Express {
         businessOps: businessOpsService.counts(),
       },
       storage: {
-        users: usersStorageBackend,
-        authSessions: "memory",
-        articles: "memory",
-        businesses: "memory",
+        ...storage,
+      },
+      durability: {
+        journalConfigured,
+        flushIntervalMs: journalConfigured ? env.storeFlushIntervalMs : null,
+        durableModules,
+        volatileModules: totalModules - durableModules,
+        totalModules,
+      },
+      contract: {
+        version: apiContract.version,
+        routeCount: apiContract.routes.length,
+        generatedAt: apiContract.generatedAt,
       },
     });
   };
@@ -230,6 +262,7 @@ export function createApp(env: AppEnv): express.Express {
     const payload = {
       status: ready ? "ready" : "not_ready",
       service: env.serviceName,
+      release,
       checks,
       modules: {
         users: usersCount,
@@ -246,10 +279,19 @@ export function createApp(env: AppEnv): express.Express {
         businessOps: businessOpsService.counts(),
       },
       storage: {
-        users: usersStorageBackend,
-        authSessions: "memory",
-        articles: "memory",
-        businesses: "memory",
+        ...storage,
+      },
+      durability: {
+        journalConfigured,
+        flushIntervalMs: journalConfigured ? env.storeFlushIntervalMs : null,
+        durableModules,
+        volatileModules: totalModules - durableModules,
+        totalModules,
+      },
+      contract: {
+        version: apiContract.version,
+        routeCount: apiContract.routes.length,
+        generatedAt: apiContract.generatedAt,
       },
     };
 
@@ -274,7 +316,7 @@ export function createApp(env: AppEnv): express.Express {
   app.get("/ready", readinessHandler);
   app.get("/api/ready", readinessHandler);
   app.get("/api/contract", (_req, res) => {
-    res.json(buildApiContract(env.serviceName));
+    res.json(apiContract);
   });
 
   app.use("/auth", authController.router);
